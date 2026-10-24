@@ -5,9 +5,9 @@ description: 營銷號短片流水線：從零建片、產圖（HTML/Canvas 程�
 
 # vibe-shorts — 短片流水線
 
-專案：`/Users/you/dev/vibe-shorts-pipeline`（私有正本，未公開）。
+專案：流水線正本 `~/dev/vibe-shorts-pipeline`（私有正本，未公開）。技能包單獨 clone 時（`~/.claude/skills/vibe-shorts`）它自己就是一個可跑的根目錄：`scripts/`、`tests/`、`films/nerf/`、`assets/mascot/` 都在裡面。
 
-這份技能包自帶全部做片能力，不必再去翻實作檔。**按需讀 `references/`，不要一次全讀。**
+這份技能包自帶全部做片能力：閘門與配音腳本在 `scripts/`、測試在 `tests/`、一支可建置的範本片在 `films/nerf/`、角色素材在 `assets/mascot/`。渲染器與匯出工具是三個公開 repo，裝法見 `references/setup.md`。**按需讀 `references/`，不要一次全讀。**
 
 ## 這條流水線是什麼
 
@@ -19,7 +19,7 @@ description: 營銷號短片流水線：從零建片、產圖（HTML/Canvas 程�
 
 | 你要做的 | 讀這個 |
 |---|---|
-| 接續進度、現在該做第幾步 | `PLAN.md`（進度正本）→ `CLAUDE.md`（repo 規則） |
+| 接續進度、現在該做第幾步 | `PLAN.md`（進度正本，私有端）→ `CLAUDE.md`（repo 規則） |
 | 新機接手、環境裝不起來、缺依賴 | `references/setup.md` |
 | 從零做一支新片 | `references/film-from-zero.md` |
 | 改畫面、卡片、字幕、色票、第 0 幀 | `references/graphics.md` |
@@ -28,12 +28,13 @@ description: 營銷號短片流水線：從零建片、產圖（HTML/Canvas 程�
 | precheck 某道門不過 | `references/gates.md` |
 | 匯出、發布、合規、授權 | `references/deliver-publish.md` |
 | 選題、鉤子、節奏、畫面要依據 | skill `viral-scout` |
+| 這份文件說的實作在哪個檔 | `references/sources.md`（每段對應的實作檔與上游 repo） |
 
-決議理由查 `DECISIONS.md`（已裁決的不重議）；寫稿細則 `docs/WRITING.md`；品牌與視覺 `BRAND.md`；配音選型 `VOICE.md`。
+決議理由查 `DECISIONS.md`（已裁決的不重議）；寫稿細則 `docs/WRITING.md`；品牌與視覺 `BRAND.md`；配音選型 `VOICE.md`。這四份在流水線私有端，技能包不帶。
 
 ## 不准違反的
 
-1. **爆款第一**。選題、鉤子、節奏、畫面一律先調 `viral-scout` 拿證據，至少一支 ≥ 10 萬播放，寫進該片 `TREATMENT.md` 的「爆款證據：」行（連結＋播放數），再 append 到 `refs/VIRAL-LEDGER.md`。沒這行 `precheck.py` 不給過。題材不設限。
+1. **爆款第一**。選題、鉤子、節奏、畫面一律先調 `viral-scout` 拿證據，至少一支 ≥ 10 萬播放，寫進該片 `TREATMENT.md` 的「爆款證據：」行（連結＋播放數），再 append 到自己的 `refs/VIRAL-LEDGER.md`。沒這行 `precheck.py` 不給過。題材不設限。
 2. **源頭先對，閘門只驗收**。問題修在產生它的地方（稿子、`index.html`、`build.sh`／`deliver.sh`），不靠閘門擋下再退回重做。**放寬任何閘門基準要使用者目視核准。**
 3. **對外發布、刪平台貼文前停下問使用者**；對談改編稿要使用者核過才建置。其餘（建置、匯出、precheck、改本機檔）全自動，不用問。
 4. **建置不併發**。`films/*/build.sh` 一次只跑一支，兩個同時寫 `out/` 會壞片。
@@ -44,8 +45,10 @@ description: 營銷號短片流水線：從零建片、產圖（HTML/Canvas 程�
 
 ## 最短路徑
 
+在流水線根目錄（公開版＝技能包目錄）跑：
+
 ```bash
-cd ~/dev/vibe-shorts-pipeline
+cp -r films/nerf films/<片名>                     # 範本開新片，改 narration.md 與 index.html
 cd films/<片名> && bash build.sh                 # 旁白→混音→檢查→渲染→合軌→節奏閘
 cd ../.. && scripts/qa_sheet.sh films/<片名>      # 看 qa/sheet.jpg，寫 qa/review_log.md
 python3 scripts/precheck.py films/<片名>          # exit 0 才准發

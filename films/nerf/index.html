@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>Claude 你是不是被降智了</title>
+<style>html,body{margin:0;background:#000;overflow:hidden}#stage,#ov{position:absolute;left:0;top:0}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"/node_modules/three/build/three.module.js","three/addons/":"/node_modules/three/examples/jsm/"}}</script>
+<script src="timeline.js"></script>
+</head>
+<body>
+<div id="stage"></div>
+<canvas id="ov" width="1080" height="1920"></canvas>
+<script type="module">
+// 深夜對談：女主＋Claude（Clawd Bot），low-poly 3D。格式照 IG 兩支爆款（TREATMENT.md）：
+// 夜晚室內、窗外城市散景、暖光打臉、flat shading、一句一鏡正反打。
+// 所有動作都是 t 的封閉式（seek_check.mjs 會比不同順序算出的同一幀）。
+import * as THREE from 'three';
+import { makePost } from '/core/three/post.js';
+import { poseAt } from './mascot/clawd-bot-shot.mjs';
+
+const W = 1080, H = 1920, TL = window.TL, DUR = TL.dur, N = TL.lines.length;
+const V = (x, y, z) => new THREE.Vector3(x, y, z);
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+const ease = u => { u = clamp(u, 0, 1); return u * u * (3 - 2 * u); };
+const lerp = (a, b, u) => a + (b - a) * u;
+
+const renderer = new THREE.WebGLRenderer({ antialias: false, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1); renderer.setSize(W, H);
+renderer.toneMapping = THREE.NeutralToneMapping; renderer.toneMappingExposure = 1.05;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.getElementById('stage').appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#0a1133');
+scene.fog = new THREE.Fog('#0a1133', 420, 1500);
+const camera = new THREE.PerspectiveCamera(20, W / H, 1, 4000);
+const post = makePost(renderer, scene, camera, W, H, { ssaa: 1, ao: true, aoRadius: 2.5, aoThickness: 2, aoAmt: .8 });
+post.bloom.strength = .45; post.bloom.threshold = .9; post.bloom.radius = .6;
+post.vig.uniforms.amt.value = .42; post.vig.uniforms.warm.value = .15; post.vig.uniforms.contrast.value = .18; post.vig.uniforms.sat.value = 1.08;
+
+const mat = (color, o = {}) => new THREE.MeshStandardMaterial({ color, flatShading: true, roughness: .82, metalness: 0, ...o });
+const glow = (color, k = 1) => new THREE.MeshStandardMaterial({ color: '#000', emissive: color, emissiveIntensity: k, flatShading: true });
+const mesh = (geo, m, p, parent = scene) => { const o = new THREE.Mesh(geo, m); if (p) o.position.set(...p); o.castShadow = o.receiveShadow = true; parent.add(o); return o; };
+let seed = 7; const R = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+function limb(a, b, r, m, parent) {
+  const d = b.clone().sub(a), o = new THREE.Mesh(new THREE.CylinderGeometry(r, r * .92, d.length(), 6), m);
+  o.position.copy(a).addScaledVector(d, .5); o.quaternion.setFromUnitVectors(V(0, 1, 0), d.normalize());
+  o.castShadow = true; parent.add(o); return o;
+}
+
+// ---------- 燈 ----------
+scene.add(new THREE.HemisphereLight('#3d4fa8', '#120a16', .7));
+const key = new THREE.DirectionalLight('#ffbb80', 2.6); key.position.set(-70, 90, 80); key.target.position.set(0, 15, -15);
+key.castShadow = true; key.shadow.mapSize.set(2048, 2048); Object.assign(key.shadow.camera, { left: -80, right: 80, top: 80, bottom: -40, near: 10, far: 400 }); key.shadow.bias = -.0005;
+scene.add(key, key.target);
+const rim = new THREE.DirectionalLight('#7f96ff', 1.8); rim.position.set(30, 60, -140); scene.add(rim);
+const fill = new THREE.DirectionalLight('#6c7fe0', .35); fill.position.set(80, 30, 40); scene.add(fill);
+const lampL = new THREE.PointLight('#ffae62', 900, 120, 2); lampL.position.set(-40, 34, -20); scene.add(lampL);
+const monL = new THREE.PointLight('#7fb0ff', 500, 90, 2); monL.position.set(30, 20, -22); scene.add(monL);
+
+// ---------- 房間：窗、窗外城市、串燈 ----------
+const wallM = mat('#141b40');
+for (const [w, h, x, y] of [[400, 60, 0, 180], [400, 80, 0, -100], [140, 210, -180, 45], [140, 210, 180, 45]]) mesh(new THREE.BoxGeometry(w, h, 4), wallM, [x, y, -100]);
+const barM = mat('#0d1230');
+for (const x of [-110, -37, 37, 110]) mesh(new THREE.BoxGeometry(4, 210, 4), barM, [x, 45, -97]);
+// 天空：上深下淺的漸層
+{
+  const c = document.createElement('canvas'); c.width = 4; c.height = 256; const x = c.getContext('2d');
+  const g = x.createLinearGradient(0, 0, 0, 256); g.addColorStop(0, '#070c2a'); g.addColorStop(.6, '#16226a'); g.addColorStop(1, '#2a2f7a');
+  x.fillStyle = g; x.fillRect(0, 0, 4, 256);
+  const sky = new THREE.Mesh(new THREE.PlaneGeometry(4000, 2400), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), fog: false }));
+  sky.position.set(0, 200, -1400); scene.add(sky);
+}
+// 地標：窗外正中央，一支片一個。要換別的地標，在 LANDMARKS 加一個建構函式、改 LANDMARK。
+const LANDMARK = 'taipei101', LANDMARK_X = -100, LANDMARK_CLEAR = 70;
+const LANDMARKS = {
+  // 台北 101：方形錐台主幹＋八節往外張的「竹節」＋頂部小節與尖塔；夜間每節上緣一圈燈
+  taipei101(root) {
+    const body = mat('#1b2a4a', { roughness: .5 }), glass = mat('#2f6f66', { emissive: '#3f9c86', emissiveIntensity: .35, roughness: .4 }), ring = glow('#e8fff4', 2.4);
+    const frustum = (rTop, rBot, h, y, m) => {
+      const o = mesh(new THREE.CylinderGeometry(rTop, rBot, h, 4, 1), m, [0, y + h / 2, 0], root);
+      o.rotation.y = Math.PI / 4; o.castShadow = false; return o;
+    };
+    frustum(34, 46, 70, -260, body);                 // 裙樓
+    frustum(30, 36, 150, -190, glass);               // 主幹（往上收）
+    let y = -40;
+    for (let k = 0; k < 8; k++) {                    // 八節，每節下窄上寬
+      frustum(36, 29, 30, y, glass);
+      frustum(37, 36, 1.6, y + 30, ring);            // 節頂燈圈
+      y += 31.6;
+    }
+    frustum(20, 24, 22, y, glass); y += 22;          // 頂部小節
+    frustum(14, 16, 14, y, glass); y += 14;
+    frustum(21, 21, 1.4, y - 20, ring);
+    const spire = mesh(new THREE.CylinderGeometry(.8, 2.6, 70, 6), glow('#d8f5ff', 1.2), [0, y + 35, 0], root);
+    spire.castShadow = false;
+    mesh(new THREE.SphereGeometry(2.2, 6, 4), glow('#ff4a4a', 3), [0, y + 72, 0], root).castShadow = false;
+  },
+};
+{
+  const root = new THREE.Group(); root.position.set(LANDMARK_X, -40, -900); scene.add(root);
+  LANDMARKS[LANDMARK](root);
+}
+// 城市：暗色樓＋窗燈（遠景會被景深糊成光斑，就是參考片的散景）
+{
+  const bldM = mat('#0b1030');
+  const warm = [], cool = [];
+  for (let i = 0; i < 70; i++) {
+    const z = -380 - R() * 600, x = (R() - .5) * 1300, w = 30 + R() * 60, base = -260;
+    let h = 80 + R() * 260;
+    if (Math.abs(x - LANDMARK_X) < LANDMARK_CLEAR) h = Math.min(h, 150);   // 地標前面的樓壓低，不擋輪廓
+    mesh(new THREE.BoxGeometry(w, h, 30), bldM, [x, base + h / 2, z]).castShadow = false;
+    for (let k = 0; k < 14; k++) {
+      const p = V(x + (R() - .5) * w * .8, base + 40 + R() * (h - 50), z + 15.5);
+      (R() < .75 ? warm : cool).push(p);
+    }
+  }
+  const put = (arr, col, k) => {
+    const im = new THREE.InstancedMesh(new THREE.PlaneGeometry(4, 5), glow(col, k), arr.length), m = new THREE.Matrix4();
+    arr.forEach((p, i) => im.setMatrixAt(i, m.makeTranslation(p.x, p.y, p.z))); scene.add(im);
+  };
+  put(warm, '#ffc27a', 2.2); put(cool, '#9cc4ff', 1.6);
+  // 原本天空有三顆浮空紅色航空燈，女主近景時剛好落在字幕正後方（10-18 目視自評抓到），已拿掉
+}
+// 窗內串燈：參考片上方那排大光斑
+for (let i = 0; i < 9; i++) {
+  const x = -95 + i * 24, sag = 6 * Math.sin(i / 8 * Math.PI);
+  mesh(new THREE.SphereGeometry(1.6, 8, 6), glow('#ffd7a0', 4), [x, 92 - sag, -88]);
+}
+
+// ---------- 桌面與道具 ----------
+mesh(new THREE.BoxGeometry(170, 3, 64), mat('#2c201b'), [0, -1.5, -2]);
+// 螢幕在女主右手邊，朝鏡頭偏左
+const mon = new THREE.Group(); mon.position.set(36, 0, -30); mon.rotation.y = -.55; scene.add(mon);
+mesh(new THREE.BoxGeometry(8, .8, 6), mat('#1c1c22'), [0, .4, 0], mon);
+mesh(new THREE.BoxGeometry(1.6, 12, 1.6), mat('#1c1c22'), [0, 6, -1], mon);
+mesh(new THREE.BoxGeometry(32, 19, 1.2), mat('#16161c'), [0, 19, 0], mon);
+mesh(new THREE.PlaneGeometry(30, 17), glow('#0f2150', 1.2), [0, 19, .62], mon);
+const CODE = [[16, 24, '#5f9cff'], [11, 21.5, '#9ec5ff'], [19, 19, '#5f9cff'], [8, 16.5, '#e8f0ff'], [14, 14, '#5f9cff']].map(([w, y, c]) => mesh(new THREE.PlaneGeometry(w, 1.3), glow(c, 1.6), [-13 + w / 2 + 1, y, .64], mon));
+// 鍵盤、馬克杯、檯燈
+mesh(new THREE.BoxGeometry(26, 1, 8), mat('#1e1e26'), [10, .5, -19]).rotation.y = -.2;
+{
+  const mug = new THREE.Group(); mug.position.set(-34, 0, -10); scene.add(mug);
+  mesh(new THREE.CylinderGeometry(3.2, 3, 8, 8), mat('#e9dfcf'), [0, 4, 0], mug);
+  mesh(new THREE.TorusGeometry(2, .6, 4, 8), mat('#e9dfcf'), [3.4, 4, 0], mug);
+  const lamp = new THREE.Group(); lamp.position.set(-46, 0, -26); scene.add(lamp);
+  mesh(new THREE.CylinderGeometry(5, 6, 1.5, 8), mat('#2a2a30'), [0, .75, 0], lamp);
+  limb(V(0, 1, 0), V(4, 24, 4), .7, mat('#2a2a30'), lamp);
+  const shade = mesh(new THREE.ConeGeometry(6, 7, 8, 1, true), mat('#2a2a30', { side: THREE.DoubleSide }), [6, 27, 7], lamp); shade.rotation.set(.5, 0, -.6);
+  mesh(new THREE.SphereGeometry(2, 8, 6), glow('#ffcf8a', 5), [7, 25, 8], lamp);
+}
+// 螢幕：「猜錯了」那句冒出紅色錯誤條（登入壞了），「開新對話」那句程式碼和錯誤條全清空。顯示與否在 poseClawd 依 t 算
+const ERR = mesh(new THREE.PlaneGeometry(26, 2.2), glow('#ff4a4a', 2), [0, 11.2, .66], mon);
+
+// ---------- 女主（host-a：鮑伯頭陶土橘髮、黑帽 T、陶土領口） ----------
+const SKIN = mat('#f6dcc8'), HAIR = mat('#d97757'), INK = mat('#2b2825');
+const host = { root: new THREE.Group() };
+host.root.position.set(6, 0, -38); host.root.rotation.y = -.2; scene.add(host.root);
+host.body = new THREE.Group(); host.root.add(host.body);   // 前傾用
+mesh(new THREE.CylinderGeometry(10, 12.5, 24, 8), INK, [0, 8, 0], host.body);
+mesh(new THREE.SphereGeometry(10, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2), INK, [0, 20, 0], host.body).scale.y = .42;
+mesh(new THREE.TorusGeometry(4.3, 1.2, 4, 8), mat('#bc5c3e'), [0, 23.6, 0], host.body).rotation.x = Math.PI / 2;
+mesh(new THREE.CylinderGeometry(2.6, 2.8, 5, 6), SKIN, [0, 24.5, 0], host.body);
+for (const s of [-1, 1]) mesh(new THREE.BoxGeometry(.5, 6.5, .5), mat('#f6b966'), [s * 1.9, 17.5, 10.2], host.body);
+mesh(new THREE.SphereGeometry(.75, 6, 4), glow('#68e399', 1.8), [0, 13, 10.9], host.body);
+for (const s of [-1, 1]) {   // 手臂擱在桌上
+  const sh = V(s * 10.5, 18, 0), el = V(s * 13.5, 2.5, 9), hd = V(s * 5.5, 1.8, 20);
+  limb(sh, el, 2.8, INK, host.body); limb(el, hd, 2.5, INK, host.body);
+  mesh(new THREE.SphereGeometry(2.3, 6, 5), SKIN, [hd.x, hd.y + .4, hd.z + 1], host.body);
+}
+host.head = new THREE.Group(); host.head.position.set(0, 31, 0); host.body.add(host.head);
+mesh(new THREE.IcosahedronGeometry(9, 1), SKIN, [0, 0, 0], host.head).scale.set(1, 1.05, .95);
+for (const s of [-1, 1]) mesh(new THREE.SphereGeometry(1.7, 6, 4), SKIN, [s * 8.7, -.5, 0], host.head);
+host.eyes = [-1, 1].map(s => {
+  const e = new THREE.Group(); e.position.set(s * 3.3, -.5, 7.9); host.head.add(e);
+  mesh(new THREE.SphereGeometry(1.3, 8, 6), mat('#231f1d', { roughness: .3 }), [0, 0, 0], e);
+  mesh(new THREE.SphereGeometry(.42, 6, 4), glow('#ffffff', 1.5), [.45, .5, 1.05], e);
+  return e;
+});
+host.brows = [-1, 1].map(s => { const b = mesh(new THREE.BoxGeometry(2.8, .6, .6), mat('#a24e33'), [s * 3.4, 2.6, 8.1], host.head); return b; });
+for (const s of [-1, 1]) { const c = mesh(new THREE.CylinderGeometry(1.4, 1.4, .2, 8), mat('#ff9a85', { transparent: true, opacity: .75 }), [s * 5, -2.7, 6.8], host.head); c.rotation.set(Math.PI / 2, 0, 0); c.rotation.y = s * .6; c.castShadow = false; }
+mesh(new THREE.TetrahedronGeometry(.9), mat('#e8bfa6'), [0, -1.9, 8.6], host.head);
+host.mouth = mesh(new THREE.BoxGeometry(2.3, .5, .6), mat('#5a2a24'), [0, -4.3, 7.5], host.head);
+// 頭髮：頭頂罩（前緣抬起露額頭）＋後側鮑伯＋瀏海
+mesh(new THREE.SphereGeometry(9.9, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2), HAIR, [0, 0, 0], host.head).rotation.x = -.35;
+{ const b = mesh(new THREE.SphereGeometry(10.5, 9, 6, Math.PI * .82, Math.PI * 1.36, Math.PI * .22, Math.PI * .52), mat('#d97757', { side: THREE.DoubleSide }), [0, 0, 0], host.head); b.scale.set(1.04, 1.06, 1); }
+for (const [x, y, rz, h] of [[-5.5, 4.4, -.35, 3], [-2, 5, -.15, 3.3], [1.8, 5.1, .3, 3.5], [5.2, 4.5, .5, 3]]) {
+  const f = mesh(new THREE.ConeGeometry(2.9, h, 3), HAIR, [x, y, 7.2], host.head); f.rotation.set(-.35, 0, Math.PI + rz);
+}
+
+// ---------- Claude（Clawd Bot：clawd-bot/README.md §3 座標，svg px × K 換成公分，svg y 往下 → 3D y 往上） ----------
+const K = .135, Y = y => (58 - y) * K;
+const ORANGE = mat('#d97757'), DARK = mat('#252422');
+const clawd = { root: new THREE.Group() };
+clawd.root.position.set(-6, 0, 6); clawd.root.rotation.y = .35; scene.add(clawd.root);
+clawd.shadow = new THREE.Mesh(new THREE.CircleGeometry(1, 16), new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: .35, depthWrite: false }));
+clawd.shadow.rotation.x = -Math.PI / 2; clawd.shadow.position.y = .05; clawd.root.add(clawd.shadow);
+clawd.actor = new THREE.Group(); clawd.root.add(clawd.actor);
+for (const [x, rz, z, h] of [[-38, 18, -1.2, 24], [-20, 8, 1.4, 22], [20, -8, 1.4, 22], [38, -18, -1.2, 24]]) {
+  const l = mesh(new THREE.CylinderGeometry(.75, .7, h * K, 6), DARK, [x * K, h * K / 2, z], clawd.actor); l.rotation.z = rz * Math.PI / 180;
+}
+{ const g = new THREE.CapsuleGeometry(41 * K, 22 * K, 3, 8); g.rotateZ(Math.PI / 2); mesh(g, ORANGE, [0, Y(3), 0], clawd.actor).scale.z = .85; }
+{ const g = new THREE.CapsuleGeometry(22 * K, 32 * K, 2, 8); g.rotateZ(Math.PI / 2); mesh(g, mat('#201f1d', { roughness: .35 }), [0, Y(2), 4.05], clawd.actor).scale.z = .32; }
+clawd.face = new THREE.Group(); clawd.face.position.set(0, 0, 4.98); clawd.actor.add(clawd.face);
+const LED = glow('#68e399', 2.6), LEDY = glow('#f6b966', 2.6), LEDR = glow('#ff8577', 2.2);
+clawd.eyesN = [-1, 1].map(s => mesh(new THREE.BoxGeometry(10 * K, 14 * K, .3), LED, [s * 17 * K, Y(-2), 0], clawd.face));
+clawd.eyesH = [-1, 1].map(s => {
+  const g = new THREE.Group(); g.position.set(s * 17 * K, Y(-3), 0); clawd.face.add(g);
+  for (const d of [-1, 1]) { const b = mesh(new THREE.BoxGeometry(1.05, .42, .3), LED, [d * .4, 0, 0], g); b.rotation.z = -d * .62; }
+  return g;
+});
+clawd.smile = mesh(new THREE.TorusGeometry(.62, .17, 3, 8, Math.PI), LED, [0, Y(9.5), 0], clawd.face); clawd.smile.rotation.z = Math.PI;
+clawd.flat = mesh(new THREE.BoxGeometry(1.6, .32, .3), LEDY, [0, Y(8), 0], clawd.face);
+for (const s of [-1, 1]) mesh(new THREE.BoxGeometry(9 * K, 4 * K, .3), glow('#ff856d', 1.3), [s * 24.5 * K, Y(10), -.05], clawd.face);
+limb(V(0, Y(-38), 0), V(0, Y(-56), 0), .28, DARK, clawd.actor);
+clawd.spark = new THREE.Group(); clawd.spark.position.set(0, Y(-62), 0); clawd.actor.add(clawd.spark);
+{
+  const s = new THREE.Shape(); for (let k = 0; k < 8; k++) { const a = Math.PI / 2 + k * Math.PI / 4, r = k % 2 ? .42 : 1.6; k ? s.lineTo(Math.cos(a) * r, Math.sin(a) * r) : s.moveTo(Math.cos(a) * r, Math.sin(a) * r); }
+  const g = new THREE.ExtrudeGeometry(s, { depth: .3, bevelEnabled: false }); g.translate(0, 0, -.15);
+  mesh(g, glow('#f6b966', 2.4), [0, 0, 0], clawd.spark);
+}
+clawd.claws = [-1, 1].map(s => {
+  const g = new THREE.Group(); clawd.actor.add(g);
+  const c = mesh(new THREE.TorusGeometry(1.75, .72, 4, 8, Math.PI * 1.6), ORANGE, [0, 0, 0], g);
+  c.rotation.z = s < 0 ? Math.PI * 2 / 3 - Math.PI * 1.8 : Math.PI / 3 - Math.PI * 1.8;   // 缺口朝上外側
+  return g;
+});
+clawd.heart = new THREE.Group(); clawd.actor.add(clawd.heart);
+{
+  const h = new THREE.Shape(); h.moveTo(0, -1); h.bezierCurveTo(-.2, -.6, -1.2, -.2, -1.2, .4); h.bezierCurveTo(-1.2, 1, -.4, 1.2, 0, .6); h.bezierCurveTo(.4, 1.2, 1.2, 1, 1.2, .4); h.bezierCurveTo(1.2, -.2, .2, -.6, 0, -1);
+  const g = new THREE.ExtrudeGeometry(h, { depth: .5, bevelEnabled: false }); g.translate(0, 0, -.25);
+  clawd.heartM = glow('#ff7e79', 2.4); clawd.heartM.transparent = true;
+  mesh(g, clawd.heartM, [0, 0, 0], clawd.heart);
+}
+
+// ---------- 分鏡：固定一個看得到窗外地標的雙人景，換人說話時慢慢平移，不硬切 ----------
+const HEAD = V(6, 31, -38), BOT = V(-6, 8.5, 6);
+// 參考 @agentmorphy Dd7fGY6gLbH：52 秒 14 刀、一鏡中位數 3.2 秒，每個機位背後都是同一扇窗＋城市燈
+const SHOT = {
+  wide: { pos: V(-2, 24, 118), to: V(-2, 30, -40), fov: 34, push: .12, focus: HEAD.clone().lerp(BOT, .5), aper: 1.2 },
+  host: { pos: V(40, 28, 105), to: V(4, 36, -38), fov: 26, push: .1, focus: HEAD, aper: 2 },
+  clawd: { pos: V(-2, 12, 120), to: V(-6, 16, 6), fov: 20, push: .1, focus: BOT, aper: 2 },
+};
+const LEAN = { host: V(3, 1, 0), clawd: V(-3, -2, 0) };   // 全景裡換人說話時，鏡頭偏向說話的人
+// 每句：鏡頭、女主表情、Claude狀態（idle/thinking/happy）、特殊動作
+const PLAN = [
+  { shot: 'wide' },                                   // Claude，你是不是被降智了？
+  { shot: 'wide', st: 'thinking', tilt: .18 },         // 沒有。
+  { shot: 'host', up: 1 },                              // 昨天網站你一次就做好欸。
+  { shot: 'host', st: 'thinking' },                   // 嗯。
+  { shot: 'host', frown: 1 },                           // 今天按鈕全部跑掉。
+  { shot: 'clawd', st: 'thinking', tilt: .18 },         // 因為妳只打了「修一下」。
+  { shot: 'host', lean: 1 },                           // 你明明就懂我意思啊。
+  { shot: 'clawd', st: 'thinking' },                   // 我用猜的。
+  { shot: 'wide', frown: 1 },                           // 那你猜錯了啦。
+  { shot: 'wide', st: 'thinking' },                    // 所以按鈕跑掉了。
+  { shot: 'host', lean: 1 },                           // Threads 上大家都說你變笨。
+  { shot: 'clawd', st: 'thinking', tilt: .18 },        // 他們上週也這樣說。
+  { shot: 'host', up: 1 },                              // 這篇有一萬個讚。
+  { shot: 'clawd', st: 'happy' },                       // 一萬人都打「修一下」。
+  { shot: 'wide', lean: 1 },                           // 那到底哪裡變了？
+  { shot: 'wide', st: 'thinking' },                   // 昨天妳打了三百字。
+  { shot: 'host', droop: 1 },                           // 蛤，所以問題是我喔？
+  { shot: 'clawd', st: 'happy' },                       // 妳說得完全正確。
+  { shot: 'wide', frown: 1 },                          // 好啦，開新對話。
+  { shot: 'wide', up: 1 },                              // Claude，你是不是被降智了？
+  { shot: 'clawd', st: 'thinking', tilt: .18 },         // 對，我變笨了。
+  { shot: 'host', up: 1 },                             // 我就知道！
+  { shot: 'wide', st: 'happy', heart: 1 },            // 妳的「修一下」寫得很好。
+];
+if (PLAN.length !== N) throw new Error(`timeline.js 有 ${N} 句，分鏡 ${PLAN.length} 鏡，對不上`);
+const T0 = TL.lines.map((l, i) => i === 0 ? 0 : l.t0 - .2);   // 換鏡在開口前 0.2 秒
+const T1 = i => i + 1 < N ? T0[i + 1] : DUR;
+const SEG = PLAN.map((p, i) => i === 0 || p.shot !== PLAN[i - 1].shot);   // true＝這句開新鏡（切）
+const segStart = i => { while (i > 0 && !SEG[i]) i--; return i; };
+const segEnd = i => { i++; while (i < N && !SEG[i]) i++; return i; };   // 下一個鏡段的第一句
+const lineAt = t => { let i = 0; while (i + 1 < N && t >= T0[i + 1]) i++; return i; };
+const WHO = TL.lines.map(l => l.who || 'host');
+const speaking = (t, who) => TL.lines.some(l => (l.who || 'host') === who && t >= l.t0 && t <= l.t1);
+const talk = t => .25 + .75 * Math.abs(Math.sin(t * 13.5)) * (.55 + .45 * Math.abs(Math.sin(t * 4.3 + 1)));
+
+// Claude狀態軌：說話的句子用 PLAN 的狀態，女主說話時回 idle 並看向女主
+const TRACK = {
+  fps: 30,
+  states: PLAN.map((p, i) => ({ t: T0[i], state: WHO[i] === 'clawd' ? (p.st || 'idle') : 'idle' })),
+  looks: PLAN.map((p, i) => ({ t: T0[i], x: WHO[i] === 'clawd' ? 0 : .7, y: WHO[i] === 'clawd' ? 0 : -.5 })),
+  pokes: [],
+};
+
+// 一個值從上一句的目標平滑走到這一句的目標（0.35 秒），封閉式
+function track(t, f) {
+  const i = lineAt(t), prev = i ? f(PLAN[i - 1], i - 1) : f(PLAN[0], 0);
+  return lerp(prev, f(PLAN[i], i), ease((t - T0[i]) / .35));
+}
+
+function poseHost(t) {
+  const i = lineAt(t), p = PLAN[i], u = clamp((t - T0[i]) / (T1(i) - T0[i]), 0, 1);
+  const nod = p.nod ? Math.sin(u * Math.PI * 2) * .12 : 0;
+  host.head.rotation.x = track(t, q => (q.droop ? .3 : q.up ? -.12 : 0)) + nod + Math.sin(t * 1.1) * .02;
+  host.head.rotation.y = track(t, (q, j) => WHO[j] === 'clawd' ? -.28 : -.1) + Math.sin(t * .7) * .03;
+  host.head.rotation.z = Math.sin(t * .9) * .03;
+  host.body.rotation.x = track(t, q => q.lean ? .12 : 0);
+  const ex = track(t, (q, j) => q.eyeX ? .45 : WHO[j] === 'clawd' ? -.3 : 0);
+  const blink = ((t + .37) % 3.3) < .12;
+  for (const e of host.eyes) { e.position.x = Math.sign(e.position.x) * 3.3 + ex; e.scale.y = blink ? .12 : 1; }
+  const fr = track(t, q => q.frown ? 1 : 0);
+  host.brows.forEach((b, k) => { b.rotation.z = (k ? -1 : 1) * fr * .35; b.position.y = 2.6 - fr * .3; });
+  host.mouth.scale.y = speaking(t, 'host') ? 1 + 2.4 * talk(t) : 1;
+}
+
+function poseClawd(t) {
+  const P = poseAt(t, TRACK), i = lineAt(t), p = PLAN[i];
+  clawd.actor.position.y = -P.bobY * K;
+  clawd.actor.scale.set(P.scaleX, P.scaleY, P.scaleX);
+  clawd.actor.rotation.z = track(t, q => q.tilt || 0);
+  clawd.shadow.scale.setScalar(P.shadowRx * K * 1.05);
+  clawd.face.position.x = P.face.x * K; clawd.face.position.y = -P.face.y * K;
+  clawd.spark.rotation.z = -P.sparkRot * Math.PI / 180;
+  const happy = P.state === 'happy', think = P.state === 'thinking';
+  clawd.eyesN.forEach(e => e.visible = !happy);
+  clawd.eyesH.forEach(e => e.visible = happy);
+  clawd.smile.visible = !think; clawd.flat.visible = think;
+  const tk = speaking(t, 'clawd') ? talk(t) : 0;
+  clawd.smile.scale.set(1, 1 + tk * 1.6, 1); clawd.flat.scale.set(1, 1 + tk * 2.5, 1);
+  // 雙螯：pose 給的 svg 座標；抱胸用 PLAN 覆寫
+  const hug = track(t, q => q.hug ? 1 : 0);
+  [P.clawL, P.clawR].forEach((c, k) => {
+    const s = k ? 1 : -1, g = clawd.claws[k];
+    g.position.set(lerp(c.x * K, s * 4.2, hug), lerp(Y(c.y), Y(30), hug), lerp(.6, 5.2, hug));
+    g.rotation.z = -c.rot * Math.PI / 180;
+  });
+  // 愛心：那句講到一半冒出來往上飄
+  const hi = PLAN.findIndex(q => q.heart);
+  const hu = clamp((t - T0[hi] - .4) / 1.6, 0, 1);
+  clawd.heart.visible = t >= T0[hi] + .4;
+  clawd.heart.position.set(2.5, Y(-70) + hu * 3, 1);
+  clawd.heart.scale.setScalar(ease(hu * 3) * (1 + .08 * Math.sin(t * 9)));
+  clawd.heartM.opacity = 1 - ease((hu - .7) / .3);
+  // 螢幕：錯誤條在 err 那句 0.3 秒後出現；clear 那句 0.3 秒後全部清空
+  const ei = PLAN.findIndex(q => q.screen === 'err'), ci = PLAN.findIndex(q => q.screen === 'clear');
+  const cleared = t >= T0[ci] + .3;
+  ERR.visible = t >= T0[ei] + .3 && !cleared;
+  CODE.forEach(o => o.visible = !cleared);
+}
+
+function cam(t) {
+  // 一個鏡段內一路慢慢推近，只在換鏡段時切；全部是 t 的封閉式函數
+  const i = lineAt(t), s = SHOT[PLAN[i].shot], a = segStart(i), b = segEnd(i);
+  const u = ease((t - T0[a]) / ((b < N ? T0[b] : DUR) - T0[a]));
+  let lean = V(0, 0, 0);
+  if (PLAN[i].shot === 'wide' && i > a) lean = LEAN[WHO[i - 1]].clone().lerp(LEAN[WHO[i]], ease((t - T0[i]) / .8));
+  else if (PLAN[i].shot === 'wide') lean = LEAN[WHO[i]].clone();
+  const d = s.pos.clone().sub(s.to).multiplyScalar(1 - s.push * u);
+  camera.position.copy(s.to).add(d).add(lean);
+  camera.position.x += Math.sin(t * .23) * .6;   // 慢速左右漂
+  camera.position.y += Math.sin(t * .8) * .12;   // 手持感的微晃
+  camera.fov = s.fov; camera.updateProjectionMatrix();
+  camera.lookAt(s.to.clone().add(lean.multiplyScalar(.6)));
+  post.dof.focus = camera.position.distanceTo(s.focus); post.dof.aper = s.aper; post.dof.maxCoc = 16;
+}
+
+// ---------- 字幕（參考片：白字、置中偏上、無底框） ----------
+const ov = document.getElementById('ov').getContext('2d');
+const FONT = '600 60px "PingFang TC"';
+let TXT = [];
+function caption(t) {
+  ov.clearRect(0, 0, W, H);
+  // 第一句從第 0 幀就顯示：第 0 幀是 IG／Threads 封面，要帶到鉤子句
+  const L = TL.lines.find((l, i) => t >= (i ? l.t0 - .1 : 0) && t < l.t1 + .25);
+  if (!L) return;
+  const s = L.text.replace(/[。！]$/, ''), maxW = 900;
+  ov.font = FONT; ov.textAlign = 'center'; ov.textBaseline = 'alphabetic';
+  const fits = r => ov.measureText(r).width <= maxW;
+  let rows = [s];
+  if (!fits(s)) {
+    const cuts = [...s.matchAll(/[，、]/g)].map(m => m.index + 1).filter(c => fits(s.slice(0, c)) && fits(s.slice(c)));
+    const cut = cuts.length ? cuts.reduce((a, c) => Math.abs(c - s.length / 2) < Math.abs(a - s.length / 2) ? c : a) : Math.ceil(s.length / 2);
+    rows = [s.slice(0, cut), s.slice(cut)];
+  }
+  rows.forEach((r, j) => {
+    const y = 700 + j * 80, w = ov.measureText(r).width;
+    ov.shadowColor = 'rgba(0,0,0,.75)'; ov.shadowBlur = 14; ov.shadowOffsetY = 3;
+    ov.fillStyle = '#ffffff'; ov.fillText(r, W / 2, y);
+    ov.shadowColor = 'transparent';
+    TXT.push({ id: 'cap', text: r, x0: W / 2 - w / 2, y0: y - 60, x1: W / 2 + w / 2, y1: y + 15, screen: true });
+  });
+}
+
+function render(t) {
+  t = clamp(t, 0, DUR); TXT = [];
+  poseHost(t); poseClawd(t); cam(t);
+  // 不從黑淡入：第 0 幀是 IG／Threads 封面（precheck「封面幀」）
+  const fade = 1 - ease((t - (DUR - .6)) / .6);
+  post.vig.uniforms.fade.value = fade;
+  post.composer.render();
+  caption(t);
+}
+
+// ---------- 對外契約（lemo core/render、scripts/*_check） ----------
+window.DUR = DUR;
+window.render = render;
+window.TEXTS = t => { render(t); return TXT.filter(b => b.screen); };
+window.CUES = TL.lines.map(l => ({ t0: l.t0, t1: l.t1, text: l.text }));
+window.SHAKES = [];
+window.EV = (() => {
+  const e = [{ t: 0, type: 'bed', len: DUR }];
+  PLAN.forEach((p, i) => {
+    if (i && SEG[i]) e.push({ t: T0[i], type: 'cut' });
+    if (WHO[i] === 'clawd' && (p.st === 'happy' || p.st === 'thinking')) e.push({ t: T0[i] + .25, type: 'blip' });
+    if (p.screen) e.push({ t: T0[i] + .3, type: 'click' });
+  });
+  e.push({ t: T0[N - 1] + .2, type: 'chime' });
+  return e.sort((a, b) => a.t - b.t);
+})();
+window.VOICE = TL.lines.map((l, j) => ({ t: l.t0, file: `out/voice/${String(j + 1).padStart(2, '0')}.wav` }));
+window.DBG = { camera, post, host, clawd, SHOT, PLAN, T0 };
+
+await document.fonts.load(FONT, TL.lines.map(l => l.text).join(''));
+await document.fonts.ready;
+render(0); render(DUR / 2); render(0);   // 先把每種材質與陰影圖編譯好，冷啟動 worker 的首幀才跟接續畫的一樣
+window.READY = true;
+</script>
+</body>
+</html>

@@ -14,13 +14,35 @@ A handoff-complete skill for a 9:16 short-video pipeline where **every asset is 
 
 ```bash
 git clone https://github.com/royalskynet/vibe-shorts-skill ~/.claude/skills/vibe-shorts
+cd ~/.claude/skills/vibe-shorts
+
+# the renderer and export tools (three public repos)
+git clone https://github.com/lemomo-ai/lemo-opuscar            ~/dev/lemo-opuscar
+git clone https://github.com/kajisho5/ffmpeg-skill             ~/dev/ffmpeg-skill
+git clone https://github.com/eternityspring/reelbench-skills   ~/dev/reelbench-skills
+
+uv venv .venv --python 3.12
+uv pip install --python .venv/bin/python 'mlx-audio==0.5.8'
+for t in tests/test_*.py; do python3 "$t"; done     # acceptance
 ```
 
-Then ask Claude Code to make a film. `SKILL.md` is the router; read `references/` on demand.
+Record one 8–12s mono 24kHz clip of your own voice into `assets/voice/me24k.wav` with its exact transcript in `assets/voice/me-script.txt`, point `cast.json` at it, then (Qwen3-TTS needs Apple Silicon; otherwise swap in the renderer's bundled edge-tts, see `references/setup.md`):
 
-## Scope
+```bash
+cp -r films/nerf films/my-film     # sample film: edit narration.md, index.html, and OUT= in build.sh
+cd films/my-film && bash build.sh  # narration -> mix -> checks -> frames -> mux -> rhythm gate
+cd ../.. && python3 scripts/precheck.py films/my-film && scripts/deliver.sh films/my-film/my-film.mp4
+```
 
-This is the **de-identified documentation layer**, published as portfolio work. The pipeline it drives — the films, the viral-evidence ledgers, the publishing credentials — stays private, so paths and repo links here point at a private source. The engineering content is complete: contracts, thresholds, failure modes and the reasoning behind each constraint.
+`SKILL.md` is the router for Claude Code; read `references/` on demand. Full dependency and voice setup: `references/setup.md`.
+
+## What's here, what isn't
+
+This is the **working pipeline**: the gate and voice scripts (`scripts/`), their tests (`tests/`), a buildable sample film (`films/nerf/`), the mascot rig (`assets/mascot/`), and the complete handoff documentation — contracts, thresholds, failure modes and the reasoning behind each constraint.
+
+What is deliberately not here, because it is account-bound or is content rather than tooling: the voice reference clips (a voice print — bring your own), the viral-evidence ledgers, the publishing scripts and credentials, and the films themselves. Every other film format and the brand are private; the sample film ships with an unused draft script so it builds end to end.
+
+The mascot (`assets/mascot/clawd-bot/`) is an original geometric character design. It is not affiliated with Anthropic and uses none of its trademarks.
 
 Topic selection for the same pipeline lives in a separate skill: [viral-scout](https://github.com/royalskynet/viral-scout-skill).
 
@@ -40,12 +62,34 @@ Topic selection for the same pipeline lives in a separate skill: [viral-scout](h
 
 ```bash
 git clone https://github.com/royalskynet/vibe-shorts-skill ~/.claude/skills/vibe-shorts
+cd ~/.claude/skills/vibe-shorts
+
+# 渲染器與匯出工具（三個公開 repo）
+git clone https://github.com/lemomo-ai/lemo-opuscar            ~/dev/lemo-opuscar
+git clone https://github.com/kajisho5/ffmpeg-skill             ~/dev/ffmpeg-skill
+git clone https://github.com/eternityspring/reelbench-skills   ~/dev/reelbench-skills
+
+uv venv .venv --python 3.12
+uv pip install --python .venv/bin/python 'mlx-audio==0.5.8'
+for t in tests/test_*.py; do python3 "$t"; done     # 裝機驗收
 ```
 
-之後直接叫 Claude Code 做片。`SKILL.md` 是分流入口，`references/` 按需讀。
+自己錄一段 8～12 秒、24kHz 單聲道的乾聲放 `assets/voice/me24k.wav`，逐字稿一字不差寫進 `assets/voice/me-script.txt`，在 `cast.json` 指過去，然後（Qwen3-TTS 只跑 Apple Silicon；沒有就改用渲染器內建的 edge-tts，見 `references/setup.md`）：
 
-## 範圍
+```bash
+cp -r films/nerf films/my-film     # 範本片：改 narration.md、index.html，與 build.sh 的 OUT=
+cd films/my-film && bash build.sh  # 旁白→混音→檢查→渲染→合軌→節奏閘
+cd ../.. && python3 scripts/precheck.py films/my-film && scripts/deliver.sh films/my-film/my-film.mp4
+```
 
-這是**脫敏後的文件層**，作為作品集公開。它驅動的流水線本體 —— 片子、爆款證據帳、發布憑證 —— 保持私有，所以文件裡的路徑與連結指向私有正本。工程內容是完整的：契約、閾值、失敗模式，以及每條限制背後的理由。
+`SKILL.md` 是給 Claude Code 的分流入口，`references/` 按需讀。完整依賴與聲音設定見 `references/setup.md`。
+
+## 帶了什麼、沒帶什麼
+
+這是**能跑的流水線本體**：閘門與配音腳本（`scripts/`）、對應測試（`tests/`）、一支可建置的範本片（`films/nerf/`）、角色動畫（`assets/mascot/`），以及交接級文件 —— 契約、閾值、失敗模式與每條限制背後的理由。
+
+刻意沒帶的是綁帳號或屬於內容而非工具的部分：配音參考音（那是聲紋，自己錄）、爆款證據帳本、發布腳本與憑證，以及片子本身。其他片型與品牌保持私有；範本片附的是一份沒用上的草稿旁白，所以它能從頭建到尾。
+
+吉祥物（`assets/mascot/clawd-bot/`）是原創幾何角色設計，不隸屬 Anthropic，也不使用其商標。
 
 同一條流水線的選題部分在另一個技能包：[viral-scout](https://github.com/royalskynet/viral-scout-skill)。

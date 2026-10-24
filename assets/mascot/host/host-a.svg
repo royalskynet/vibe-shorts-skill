@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-120 -140 240 240" width="480" height="480" id="host-a-svg">
+  <!-- 主持人候選 a：短鮑伯＋連帽衫。色票與 Clawd Bot 同一套（assets/mascot/clawd-bot/README.md §2） -->
+  <ellipse id="shadow" cx="0" cy="92" rx="56" ry="8" fill="rgba(31,30,29,0.12)"/>
+  <g id="actor">
+<g id="hair-sway-l" transform="translate(-52,-52)"><path d="M0,0 C-8,10 -10,22 -6,32 L6,28 C2,18 2,8 8,-2 Z" fill="#BC5C3E" stroke="#252422" stroke-width="2.6" stroke-linejoin="round"/></g>
+       <g id="hair-sway-r" transform="translate(52,-52)"><path d="M0,0 C8,10 10,22 6,32 L-6,28 C-2,18 -2,8 -8,-2 Z" fill="#BC5C3E" stroke="#252422" stroke-width="2.6" stroke-linejoin="round"/></g>
+<path d="M0,-108 C40,-108 62,-82 62,-46 C62,-18 56,2 52,14 L34,8 C40,-10 42,-28 40,-44 C30,-36 -30,-36 -40,-44 C-42,-28 -40,-10 -34,8 L-52,14 C-56,2 -62,-18 -62,-46 C-62,-82 -40,-108 0,-108 Z" fill="#D97757" stroke="#252422" stroke-width="3.2" stroke-linejoin="round"/>
+<g id="body">
+    <path d="M-62,86 C-62,40 -34,16 0,16 C34,16 62,40 62,86 Z" fill="#2B2825" stroke="#252422" stroke-width="3.2" stroke-linejoin="round"/>
+    <path d="M-26,18 C-20,34 -10,42 0,42 C10,42 20,34 26,18 L18,14 C12,28 -12,28 -18,14 Z" fill="#BC5C3E" stroke="#252422" stroke-width="2.6" stroke-linejoin="round"/>
+    <path d="M-8,40 L-10,66" stroke="#F6B966" stroke-width="3.4" stroke-linecap="round"/>
+    <path d="M8,40 L10,66" stroke="#F6B966" stroke-width="3.4" stroke-linecap="round"/>
+    <circle cx="0" cy="62" r="5" fill="#68E399" stroke="#252422" stroke-width="2.2"/>
+  </g>
+
+  <!-- 頸與肩的交界先畫，避免描邊疊在臉上 -->
+  <path id="neck" d="M-13,-18 L-13,6 Q0,14 13,6 L13,-18 Z" fill="#EFCBB6" stroke="#252422" stroke-width="3.2" stroke-linejoin="round"/>
+  <g id="head">
+    <path id="face" d="M0,-96 C34,-96 50,-72 50,-44 C50,-12 30,10 0,10 C-30,10 -50,-12 -50,-44 C-50,-72 -34,-96 0,-96 Z"
+          fill="#F8E2D2" stroke="#252422" stroke-width="3.2" stroke-linejoin="round"/>
+    <!-- 耳 -->
+    <path d="M-50,-50 C-58,-50 -60,-38 -52,-34" fill="#F8E2D2" stroke="#252422" stroke-width="2.4"/>
+    <path d="M50,-50 C58,-50 60,-38 52,-34" fill="#F8E2D2" stroke="#252422" stroke-width="2.4"/>
+    <g id="face-parts">
+      <!-- 腮紅 -->
+      <ellipse cx="-28" cy="-34" rx="9" ry="4.5" fill="#FF856D" opacity="0.55"/>
+      <ellipse cx="28" cy="-34" rx="9" ry="4.5" fill="#FF856D" opacity="0.55"/>
+      <!-- 眉 -->
+      <g id="brows" stroke="#BC5C3E" stroke-width="3.4" stroke-linecap="round" fill="none">
+        <path d="M-30,-58 Q-21,-62 -12,-59"/>
+        <path d="M12,-59 Q21,-62 30,-58"/>
+      </g>
+      <!-- 睜眼（預設） -->
+      <g id="eyes-open">
+        <g>
+          <ellipse cx="-21" cy="-44" rx="10" ry="12.5" fill="#3A3632"/>
+          <circle cx="-24" cy="-49" r="3.6" fill="#FFFFFF"/>
+          <circle cx="-18" cy="-39" r="2.2" fill="#68E399"/>
+          <path d="M-32,-54 Q-21,-60 -10,-54" stroke="#252422" stroke-width="3.6" fill="none" stroke-linecap="round"/>
+        </g>
+        <g>
+          <ellipse cx="21" cy="-44" rx="10" ry="12.5" fill="#3A3632"/>
+          <circle cx="18" cy="-49" r="3.6" fill="#FFFFFF"/>
+          <circle cx="24" cy="-39" r="2.2" fill="#68E399"/>
+          <path d="M10,-54 Q21,-60 32,-54" stroke="#252422" stroke-width="3.6" fill="none" stroke-linecap="round"/>
+        </g>
+      </g>
+      <!-- 半閉與閉眼：眨眼與思考用，動畫層切 display -->
+      <g id="eyes-half" style="display:none" stroke="#252422" stroke-width="3.6" fill="none" stroke-linecap="round">
+        <path d="M-32,-48 Q-21,-54 -10,-48"/>
+        <path d="M10,-48 Q21,-54 32,-48"/>
+        <path d="M-30,-44 Q-21,-40 -12,-44" stroke="#3A3632" stroke-width="5"/>
+        <path d="M12,-44 Q21,-40 30,-44" stroke="#3A3632" stroke-width="5"/>
+      </g>
+      <g id="eyes-closed" style="display:none" stroke="#252422" stroke-width="3.6" fill="none" stroke-linecap="round">
+        <path d="M-31,-45 Q-21,-38 -11,-45"/>
+        <path d="M11,-45 Q21,-38 31,-45"/>
+      </g>
+      <!-- 鼻與嘴（嘴由動畫層換 d，對口型） -->
+      <path d="M0,-34 L3,-30" stroke="#252422" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+      <path id="mouth" d="M-7,-22 Q0,-16 7,-22" stroke="#252422" stroke-width="3" fill="none" stroke-linecap="round"/>
+    </g>
+  </g>
+
+<path d="M-44,-58 C-40,-92 -16,-104 0,-104 C18,-104 42,-92 44,-56 C34,-74 20,-82 6,-80 C10,-72 8,-64 4,-58 C-6,-74 -26,-76 -44,-58 Z" fill="#F29172" stroke="#252422" stroke-width="3.2" stroke-linejoin="round"/>
+  </g>
+  <g id="fx"></g>
+</svg>

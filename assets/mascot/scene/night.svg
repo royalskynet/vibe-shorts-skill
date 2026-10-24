@@ -1,0 +1,284 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1920" width="1080" height="1920">
+  <defs>
+    <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1A1816"/><stop offset="1" stop-color="#2A2420"/>
+    </linearGradient>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0F1424"/><stop offset="1" stop-color="#1E2A44"/>
+    </linearGradient>
+    <radialGradient id="lamp" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#F6B966" stop-opacity="0.55"/>
+      <stop offset="0.5" stop-color="#D97757" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#D97757" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="screenGlow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#68E399" stop-opacity="0.25"/>
+      <stop offset="1" stop-color="#68E399" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="bokeh"><feGaussianBlur stdDeviation="6"/></filter>
+    <clipPath id="pane"><rect x="100" y="200" width="880" height="720" rx="18"/></clipPath>
+  </defs>
+
+  <!-- 牆 -->
+  <rect width="1080" height="1920" fill="url(#wall)"/>
+
+  <!-- 窗：夜空、月、遠景城市（虛焦＝淺景深） -->
+  <rect x="100" y="200" width="880" height="720" rx="18" fill="url(#sky)"/>
+  <g filter="url(#bokeh)" clip-path="url(#pane)">
+    <circle cx="820" cy="330" r="46" fill="#F4EAE2" opacity="0.85"/>
+    <rect x="120" y="680" width="60" height="220" fill="#232B3D"/>
+<rect x="130" y="700" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="150" y="700" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="130" y="870" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="150" y="870" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="186" y="600" width="77" height="300" fill="#232B3D"/>
+<rect x="196" y="654" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="216" y="654" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="236" y="654" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="196" y="824" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="216" y="824" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="236" y="824" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="269" y="720" width="94" height="180" fill="#232B3D"/>
+<rect x="279" y="740" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="299" y="740" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="319" y="740" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="339" y="740" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="369" y="540" width="71" height="360" fill="#232B3D"/>
+<rect x="379" y="628" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="399" y="628" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="419" y="628" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="379" y="798" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="399" y="798" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="419" y="798" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="446" y="640" width="88" height="260" fill="#232B3D"/>
+<rect x="456" y="728" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="476" y="728" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="496" y="728" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="516" y="728" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="540" y="700" width="65" height="200" fill="#232B3D"/>
+<rect x="550" y="720" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="570" y="720" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="590" y="720" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="611" y="570" width="82" height="330" fill="#232B3D"/>
+<rect x="621" y="624" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="641" y="624" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="661" y="624" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="681" y="624" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="621" y="794" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="641" y="794" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="661" y="794" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="681" y="794" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="699" y="660" width="99" height="240" fill="#232B3D"/>
+<rect x="709" y="680" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="729" y="680" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="749" y="680" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="769" y="680" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="709" y="850" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="729" y="850" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="749" y="850" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="769" y="850" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="804" y="610" width="76" height="290" fill="#232B3D"/>
+<rect x="814" y="698" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="834" y="698" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="854" y="698" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="814" y="868" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="834" y="868" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="854" y="868" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="886" y="730" width="93" height="170" fill="#232B3D"/>
+<rect x="896" y="818" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="916" y="818" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="936" y="818" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="956" y="818" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="985" y="590" width="70" height="310" fill="#232B3D"/>
+<rect x="995" y="610" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="1015" y="610" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="1035" y="610" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="995" y="780" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="1015" y="780" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="1035" y="780" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="1061" y="670" width="87" height="230" fill="#232B3D"/>
+<rect x="1071" y="724" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="1091" y="724" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="1111" y="724" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+<rect x="1131" y="724" width="8" height="12" fill="#F6B966" opacity="0.7"/>
+  </g>
+  <rect x="100" y="200" width="880" height="720" rx="18" fill="none" stroke="#252422" stroke-width="14"/>
+  <line x1="540" y1="200" x2="540" y2="920" stroke="#252422" stroke-width="10"/>
+
+  <!-- 檯燈的暖光 -->
+  <circle cx="990" cy="1020" r="520" fill="url(#lamp)"/>
+  <g transform="translate(90,0)">
+    <path d="M880,1250 L900,1060" stroke="#252422" stroke-width="10" stroke-linecap="round"/>
+    <path d="M840,1060 L960,1060 L930,990 L870,990 Z" fill="#D97757" stroke="#252422" stroke-width="6" stroke-linejoin="round"/>
+    <ellipse cx="880" cy="1252" rx="40" ry="10" fill="#252422"/>
+  </g>
+
+  <!-- 女主（桌子後面，半身） -->
+  <svg x="20" y="640" width="700" height="700" viewBox="-120 -140 240 240" overflow="visible">
+  <!-- 主持人候選 a：短鮑伯＋連帽衫。色票與 Clawd Bot 同一套（assets/mascot/clawd-bot/README.md §2） -->
+  <ellipse id="host-shadow" cx="0" cy="92" rx="56" ry="8" fill="rgba(31,30,29,0.12)"/>
+  <g id="host-actor">
+<g id="host-hair-sway-l" transform="translate(-52,-52)"><path d="M0,0 C-8,10 -10,22 -6,32 L6,28 C2,18 2,8 8,-2 Z" fill="#BC5C3E" stroke="#252422" stroke-width="2.6" stroke-linejoin="round"/></g>
+       <g id="host-hair-sway-r" transform="translate(52,-52)"><path d="M0,0 C8,10 10,22 6,32 L-6,28 C-2,18 -2,8 -8,-2 Z" fill="#BC5C3E" stroke="#252422" stroke-width="2.6" stroke-linejoin="round"/></g>
+<path d="M0,-108 C40,-108 62,-82 62,-46 C62,-18 56,2 52,14 L34,8 C40,-10 42,-28 40,-44 C30,-36 -30,-36 -40,-44 C-42,-28 -40,-10 -34,8 L-52,14 C-56,2 -62,-18 -62,-46 C-62,-82 -40,-108 0,-108 Z" fill="#D97757" stroke="#252422" stroke-width="3.2" stroke-linejoin="round"/>
+<g id="host-body">
+    <path d="M-62,86 C-62,40 -34,16 0,16 C34,16 62,40 62,86 Z" fill="#2B2825" stroke="#252422" stroke-width="3.2" stroke-linejoin="round"/>
+    <path d="M-26,18 C-20,34 -10,42 0,42 C10,42 20,34 26,18 L18,14 C12,28 -12,28 -18,14 Z" fill="#BC5C3E" stroke="#252422" stroke-width="2.6" stroke-linejoin="round"/>
+    <path d="M-8,40 L-10,66" stroke="#F6B966" stroke-width="3.4" stroke-linecap="round"/>
+    <path d="M8,40 L10,66" stroke="#F6B966" stroke-width="3.4" stroke-linecap="round"/>
+    <circle cx="0" cy="62" r="5" fill="#68E399" stroke="#252422" stroke-width="2.2"/>
+  </g>
+
+  <!-- 頸與肩的交界先畫，避免描邊疊在臉上 -->
+  <path id="host-neck" d="M-13,-18 L-13,6 Q0,14 13,6 L13,-18 Z" fill="#EFCBB6" stroke="#252422" stroke-width="3.2" stroke-linejoin="round"/>
+  <g id="host-head">
+    <path id="host-face" d="M0,-96 C34,-96 50,-72 50,-44 C50,-12 30,10 0,10 C-30,10 -50,-12 -50,-44 C-50,-72 -34,-96 0,-96 Z"
+          fill="#F8E2D2" stroke="#252422" stroke-width="3.2" stroke-linejoin="round"/>
+    <!-- 耳 -->
+    <path d="M-50,-50 C-58,-50 -60,-38 -52,-34" fill="#F8E2D2" stroke="#252422" stroke-width="2.4"/>
+    <path d="M50,-50 C58,-50 60,-38 52,-34" fill="#F8E2D2" stroke="#252422" stroke-width="2.4"/>
+    <g id="host-face-parts">
+      <!-- 腮紅 -->
+      <ellipse cx="-28" cy="-34" rx="9" ry="4.5" fill="#FF856D" opacity="0.55"/>
+      <ellipse cx="28" cy="-34" rx="9" ry="4.5" fill="#FF856D" opacity="0.55"/>
+      <!-- 眉 -->
+      <g id="host-brows" stroke="#BC5C3E" stroke-width="3.4" stroke-linecap="round" fill="none">
+        <path d="M-30,-58 Q-21,-62 -12,-59"/>
+        <path d="M12,-59 Q21,-62 30,-58"/>
+      </g>
+      <!-- 睜眼（預設） -->
+      <g id="host-eyes-open">
+        <g>
+          <ellipse cx="-21" cy="-44" rx="10" ry="12.5" fill="#3A3632"/>
+          <circle cx="-24" cy="-49" r="3.6" fill="#FFFFFF"/>
+          <circle cx="-18" cy="-39" r="2.2" fill="#68E399"/>
+          <path d="M-32,-54 Q-21,-60 -10,-54" stroke="#252422" stroke-width="3.6" fill="none" stroke-linecap="round"/>
+        </g>
+        <g>
+          <ellipse cx="21" cy="-44" rx="10" ry="12.5" fill="#3A3632"/>
+          <circle cx="18" cy="-49" r="3.6" fill="#FFFFFF"/>
+          <circle cx="24" cy="-39" r="2.2" fill="#68E399"/>
+          <path d="M10,-54 Q21,-60 32,-54" stroke="#252422" stroke-width="3.6" fill="none" stroke-linecap="round"/>
+        </g>
+      </g>
+      <!-- 半閉與閉眼：眨眼與思考用，動畫層切 display -->
+      <g id="host-eyes-half" style="display:none" stroke="#252422" stroke-width="3.6" fill="none" stroke-linecap="round">
+        <path d="M-32,-48 Q-21,-54 -10,-48"/>
+        <path d="M10,-48 Q21,-54 32,-48"/>
+        <path d="M-30,-44 Q-21,-40 -12,-44" stroke="#3A3632" stroke-width="5"/>
+        <path d="M12,-44 Q21,-40 30,-44" stroke="#3A3632" stroke-width="5"/>
+      </g>
+      <g id="host-eyes-closed" style="display:none" stroke="#252422" stroke-width="3.6" fill="none" stroke-linecap="round">
+        <path d="M-31,-45 Q-21,-38 -11,-45"/>
+        <path d="M11,-45 Q21,-38 31,-45"/>
+      </g>
+      <!-- 鼻與嘴（嘴由動畫層換 d，對口型） -->
+      <path d="M0,-34 L3,-30" stroke="#252422" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+      <path id="host-mouth" d="M-7,-22 Q0,-16 7,-22" stroke="#252422" stroke-width="3" fill="none" stroke-linecap="round"/>
+    </g>
+  </g>
+
+<path d="M-44,-58 C-40,-92 -16,-104 0,-104 C18,-104 42,-92 44,-56 C34,-74 20,-82 6,-80 C10,-72 8,-64 4,-58 C-6,-74 -26,-76 -44,-58 Z" fill="#F29172" stroke="#252422" stroke-width="3.2" stroke-linejoin="round"/>
+  </g>
+  <g id="host-fx"></g>
+</svg>
+
+  <!-- 桌 -->
+  <rect x="0" y="1250" width="1080" height="90" fill="#4A3A30" stroke="#252422" stroke-width="6"/>
+  <rect x="0" y="1340" width="1080" height="580" fill="#201F1D"/>
+
+  <!-- 筆電：螢幕背對鏡頭，透出終端機綠光 -->
+  <circle cx="470" cy="1170" r="200" fill="url(#screenGlow)"/>
+  <path d="M330,1250 L360,1110 L590,1110 L620,1250 Z" fill="#3A3632" stroke="#252422" stroke-width="6" stroke-linejoin="round"/>
+  <path d="M460,1178 l10,-10 l10,10 l-10,10 Z" fill="#D97757"/>
+
+  <!-- Clawd Bot（坐在桌上） -->
+  <svg x="600" y="960" width="380" height="380" viewBox="-120 -120 240 240" overflow="visible">
+  <defs>
+    <linearGradient id="clawd-mechaBodyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#F29172"/>
+      <stop offset="60%" stop-color="#D97757"/>
+      <stop offset="100%" stop-color="#BC5C3E"/>
+    </linearGradient>
+    <filter id="clawd-softGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#D97757" flood-opacity="0.22"/>
+    </filter>
+  </defs>
+
+  <!-- Ground Shadow -->
+  <ellipse id="clawd-shadow" cx="0" cy="80" rx="50" ry="10" fill="rgba(31,30,29,0.1)"/>
+
+  <g id="clawd-actor" filter="url(#clawd-softGlow)">
+    <!-- Symmetrical Center Antenna (Claude Spark Signal) -->
+    <g id="clawd-crab-antenna" transform="translate(0, -56)">
+      <line x1="0" y1="0" x2="0" y2="16" stroke="#252422" stroke-width="4" stroke-linecap="round"/>
+      <g id="clawd-crab-spark" transform="translate(0, -6)">
+        <path d="M0,-12 C2.5,-3 3,-2.5 12,0 C3,2.5 2.5,3 0,12 C-2.5,3 -3,2.5 -12,0 C-3,-2.5 -2.5,-3 0,-12 Z" fill="#F6B966"/>
+      </g>
+    </g>
+
+    <!-- Symmetrical Minimalist Mechanical Legs (2 pairs of clean rounded capsules) -->
+    <g id="clawd-crab-legs">
+      <rect id="clawd-leg-l-1" x="-44" y="34" width="11" height="24" rx="5.5" fill="#252422" transform="rotate(18 -38 38)"/>
+      <rect id="clawd-leg-r-1" x="33" y="34" width="11" height="24" rx="5.5" fill="#252422" transform="rotate(-18 38 38)"/>
+      <rect id="clawd-leg-l-2" x="-26" y="38" width="11" height="22" rx="5.5" fill="#252422" transform="rotate(8 -20 42)"/>
+      <rect id="clawd-leg-r-2" x="15" y="38" width="11" height="22" rx="5.5" fill="#252422" transform="rotate(-8 20 42)"/>
+    </g>
+
+    <!-- Symmetrical Floating C-Claws (Left & Right) -->
+    <g id="clawd-claw-l" transform="translate(-66, 2)">
+      <path d="M8,-16 A18,18 0 1,0 8,16 L2,8 A8,8 0 1,1 2,-8 Z" fill="url(#clawd-mechaBodyGrad)" stroke="#252422" stroke-width="3.2" stroke-linejoin="round"/>
+    </g>
+    <g id="clawd-claw-r" transform="translate(66, 2)">
+      <path d="M-8,-16 A18,18 0 1,1 -8,16 L-2,8 A8,8 0 1,0 -2,-8 Z" fill="url(#clawd-mechaBodyGrad)" stroke="#252422" stroke-width="3.2" stroke-linejoin="round"/>
+    </g>
+
+    <!-- Unified Smooth Pill-Dome Mecha Body (100% Left-Right Symmetrical) -->
+    <rect id="clawd-crab-body" x="-52" y="-38" width="104" height="82" rx="41" fill="url(#clawd-mechaBodyGrad)" stroke="#252422" stroke-width="3.5"/>
+    <path d="M-32,-26 Q0,-34 32,-26" stroke="rgba(255,255,255,0.45)" stroke-width="4" stroke-linecap="round" fill="none"/>
+
+    <!-- Symmetrical Smart Visor Screen -->
+    <rect id="clawd-crab-visor" x="-38" y="-20" width="76" height="44" rx="22" fill="#201F1D" stroke="#3A3632" stroke-width="2"/>
+
+    <!-- LED Face inside Visor -->
+    <g id="clawd-face">
+      <!-- LED Blush Bars -->
+      <rect x="-29" y="8" width="9" height="4" rx="2" fill="#FF856D" opacity="0.85"/>
+      <rect x="20" y="8" width="9" height="4" rx="2" fill="#FF856D" opacity="0.85"/>
+
+      <!-- Normal LED Eyes -->
+      <g id="clawd-eyes-normal">
+        <rect x="-22" y="-9" width="10" height="14" rx="5" fill="#68E399"/>
+        <rect x="12" y="-9" width="10" height="14" rx="5" fill="#68E399"/>
+      </g>
+
+      <!-- Happy LED Arcs -->
+      <g id="clawd-eyes-happy" style="display:none" stroke="#68E399" stroke-width="4" stroke-linecap="round" fill="none">
+        <path d="M-23,0 Q-17,-9 -11,0"/>
+        <path d="M11,0 Q17,-9 23,0"/>
+      </g>
+
+      <!-- Sleep / Error LED Lines -->
+      <g id="clawd-eyes-sleep" style="display:none" stroke="#FF8577" stroke-width="3.5" stroke-linecap="round" fill="none">
+        <line x1="-23" y1="-2" x2="-11" y2="-2"/>
+        <line x1="11" y1="-2" x2="23" y2="-2"/>
+      </g>
+
+      <!-- Minimalist LED Mouth -->
+      <path id="clawd-mouth" d="M-5,7 Q0,11 5,7" stroke="#68E399" stroke-width="2.8" stroke-linecap="round" fill="none"/>
+    </g>
+  </g>
+
+  <g id="clawd-fx"></g>
+</svg>
+
+  <!-- 一句一卡字幕：說話者名字用角色色（女主＝橘、Clawd＝LED 綠） -->
+  <g>
+    <rect x="90" y="1480" width="900" height="210" rx="34" fill="#141312" opacity="0.92" stroke="#3A3632" stroke-width="3"/>
+    <text x="140" y="1546" font-family="PingFang TC" font-size="36" font-weight="600" fill="#F29172">她</text>
+    <text x="140" y="1630" font-family="PingFang TC" font-size="60" font-weight="600" fill="#F4EAE2">你又忘了我們昨天聊過什麼？</text>
+  </g>
+
+  <!-- 時間戳：深夜感 -->
+  <text x="540" y="130" text-anchor="middle" font-family="Menlo" font-size="40" fill="#F6B966" opacity="0.85">01:24 AM</text>
+</svg>

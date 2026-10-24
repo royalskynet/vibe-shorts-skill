@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>Clawd Bot lookdev</title>
+<style>
+  html,body{margin:0;background:#201F1D;overflow:hidden}
+  #stage{position:relative;width:1080px;height:1920px}
+  canvas,#mascot{position:absolute;left:0;top:0}
+  /* 吉祥物是疊在 canvas 上的 DOM SVG 層，page.screenshot 截整頁，所以兩層都會進畫面 */
+  #mascot{width:1080px;height:1920px;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="c" width="1080" height="1920"></canvas>
+  <div id="mascot"></div>
+</div>
+<script type="module">
+import { poseAt, applyPose } from './clawd-bot-shot.mjs';
+
+const FPS = 30, W = 1080, H = 1920;
+const g = document.getElementById('c').getContext('2d', { alpha: false });
+
+// 色票照 clawd-bot/README.md §2
+const PAL = { lit: '#F29172', body: '#D97757', dark: '#BC5C3E', ink: '#252422', screen: '#201F1D', gold: '#F6B966', led: '#68E399' };
+
+// 四個狀態各兩秒，看完一輪就知道鏡頭裡長什麼樣
+const track = {
+  fps: FPS,
+  states: [{ t: 0, state: 'idle' }, { t: 2, state: 'thinking' }, { t: 4, state: 'happy' }, { t: 6, state: 'sleep' }],
+  looks: [{ t: 0, x: 0, y: 0 }, { t: 1, x: 0.8, y: -0.4 }, { t: 3, x: -0.8, y: 0.3 }, { t: 5, x: 0, y: 0 }],
+  pokes: [4.0],
+};
+const DUR = 8;
+
+const svg = await fetch('./clawd-bot/clawd-bot.svg').then(r => {
+  if (!r.ok) throw new Error(`clawd-bot.svg 取不到：${r.status}`);   // 少了角色就該停下，不要默默出一支沒有主持人的片
+  return r.text();
+});
+const host = document.getElementById('mascot');
+host.innerHTML = svg;
+const root = host.querySelector('svg');
+root.removeAttribute('width'); root.removeAttribute('height');
+root.setAttribute('viewBox', '-120 -120 240 240');
+Object.assign(root.style, { position: 'absolute', left: '140px', top: '760px', width: '800px', height: '800px' });
+
+function render(t) {
+  g.fillStyle = PAL.screen; g.fillRect(0, 0, W, H);
+  const grad = g.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#2B2825'); grad.addColorStop(1, PAL.screen);
+  g.fillStyle = grad; g.fillRect(0, 0, W, H);
+  g.strokeStyle = 'rgba(217,119,87,0.18)'; g.lineWidth = 2;
+  for (let y = 120; y < H; y += 120) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); }
+
+  const pose = poseAt(t, track);
+  applyPose(root, pose);
+
+  g.fillStyle = PAL.lit; g.textAlign = 'center';
+  g.font = '700 110px "PingFang TC"';
+  g.fillText('Clawd Bot', W / 2, 420);
+  g.fillStyle = PAL.gold; g.font = '500 56px Menlo, "PingFang TC"';
+  g.fillText(`${pose.state}  t=${t.toFixed(2)}s`, W / 2, 520);
+  g.fillStyle = PAL.led; g.font = '500 40px Menlo, "PingFang TC"';
+  g.fillText('idle → thinking → happy → sleep', W / 2, 1700);
+}
+
+window.DUR = DUR;
+window.render = render;
+await document.fonts.ready;
+render(0);
+window.READY = true;
+</script>
+</body>
+</html>
