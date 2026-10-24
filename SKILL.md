@@ -28,7 +28,6 @@ description: 營銷號短片流水線：從零建片、產圖（HTML/Canvas 程�
 | precheck 某道門不過 | `references/gates.md` |
 | 匯出、發布、合規、授權 | `references/deliver-publish.md` |
 | 選題、鉤子、節奏、畫面要依據 | skill `viral-scout` |
-| 這份文件說的實作在哪一行 | `references/sources.md`（每段對應的 GitHub 正本連結） |
 
 決議理由查 `DECISIONS.md`（已裁決的不重議）；寫稿細則 `docs/WRITING.md`；品牌與視覺 `BRAND.md`；配音選型 `VOICE.md`。
 
