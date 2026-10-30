@@ -1,68 +1,65 @@
 ---
 name: vibe-shorts
-description: 營銷號短片流水線：從零建片、產圖（HTML/Canvas 程式渲染）、產動畫（無狀態 poseAt）、做聲音（本機 Qwen3-TTS 配音與混音）、閘門、三平台匯出、發布、看數據。說「營銷號」「做片」「下一支片」「vibe shorts」「接續 PLAN」，或要改這條流水線的畫面、動畫、配音、閘門時用。找爆款證據另用 viral-scout。
+description: 營銷號短片流水線：建片、畫面、動畫、配音、閘門、三平台匯出、發布、看數據。說「營銷號」「做片」「下一支片」「vibe shorts」「接續 PLAN」，或要改這條流水線時用。找爆款證據用 viral-scout。
 ---
 
 # vibe-shorts — 短片流水線
 
-專案：流水線正本 `~/dev/vibe-shorts-pipeline`（私有正本，未公開）。技能包單獨 clone 時（`~/.claude/skills/vibe-shorts`）它自己就是一個可跑的根目錄：`scripts/`、`tests/`、`films/nerf/`、`assets/mascot/` 都在裡面。
+正本是私有 repo，未公開。技能包單獨 clone（`~/.claude/skills/vibe-shorts`）時自己就是可跑的根目錄：`scripts/`、`tests/`、範本片 `films/nerf/`、角色 `assets/mascot/`；渲染器與匯出工具是外部公開 repo（`references/setup.md`）。指令都從根目錄起算，`<片名>` 用 kebab-case。
 
-這份技能包自帶全部做片能力：閘門與配音腳本在 `scripts/`、測試在 `tests/`、一支可建置的範本片在 `films/nerf/`、角色素材在 `assets/mascot/`。渲染器與匯出工具是三個公開 repo，裝法見 `references/setup.md`。**按需讀 `references/`，不要一次全讀。**
+全部程式生成：畫面是 `index.html` 的 `render(t)`，聲音是本機 Qwen3-TTS＋程式合成配樂；不用 AI 生圖、剪輯軟體、外部 TTS API。改片子＝改程式碼與稿子。
 
-## 這條流水線是什麼
+進度正本 `PLAN.md`、repo 規則 `CLAUDE.md`、已裁決不重議 `DECISIONS.md`、寫稿細則 `docs/WRITING.md`、品牌色票 `BRAND.md`、配音選型 `VOICE.md`（私有端，技能包不帶）。
 
-對標爆款 → 寫稿 → 本機 TTS 配音 → 程式合成混音 → HTML/Canvas 逐幀渲染 → 機械閘門 → 三平台匯出 → 發布 → 數據回饋。
+## 硬規則
 
-**全部程式生成：沒有 AI 生圖、沒有剪輯軟體、沒有真人配音、沒有外部 TTS API。** 畫面是 `index.html` 的 `render(t)`，聲音是本機 Qwen3-TTS＋正弦波合成配樂，改片子就是改程式碼與稿子。
+1. **爆款第一**：選題、鉤子、節奏、畫面先調 `viral-scout`，至少一支 ≥ 10 萬播放，寫進 `TREATMENT.md`「爆款證據：」行（連結＋播放數）並 append `refs/VIRAL-LEDGER.md`。沒這行 precheck 不過。題材不設限。
+2. **源頭先對，閘門只驗收**：修在產生問題的地方（稿子、`index.html`、`build.sh`／`deliver.sh`）。閘門假設不符片型就分流（`rhythm-profile`），不扭曲片子；**新增或放寬任何閘門基準要使用者目視核准**。
+3. **要人點頭**：發布到 YT／IG／Threads、刪已發貼文、對談改編稿開始建置、放寬閘門。其餘（建置、匯出、precheck、改本機檔）全自動。
+4. **建置不併發**：`films/*/build.sh` 一次一支，兩支同寫 `out/` 會壞片。
+5. **新片複製 `films/nerf/`**（深夜對談：女主＋Clawd Bot，three.js）。`films/dating-bill/` 是舊資料卡格式，不當模板。
+6. **稿子禁防衛性中立語言**（最高嚴重度）：不寫「問法不同」「不能直接比較」「不代表全部」這類自我辯護句；限定範圍寫進事實本身（年份、地點、對象）。
+7. **台詞不照抄**爆款原稿（相似度 > 0.6 擋），只借結構（節拍、三段加碼、回扣）。
+8. **`render(t)` 只依賴 `t`**：不累積狀態、不讀 `Date.now()`、不發外部請求。所有姿態、鏡頭、轉場都是 `t` 的純函數（`references/animation.md`）。
+9. **數字集中在 `index.html` 頂端 `FACTS`**，卡片用 `${FACTS.KEY}` 引用，每個 key 在 `meta/facts.md` 有來源。
+10. **三個 Python 不互換**：配音／核稿用 `.venv/bin/python`；`precheck.py`、`rhythm_check.py`、`cdp.py` 用系統 `python3`；各片 `mix.py` 用 `LIB="$LIB" "$LIB/.venv/bin/python"`。
+11. **憑證**：發布權杖值不進 repo、不進對話；公開網址用隨機 token，平台抓完立刻關 funnel（`references/deliver-publish.md`）。
 
-## 先分流
+## 做一支片
 
-| 你要做的 | 讀這個 |
-|---|---|
-| 接續進度、現在該做第幾步 | `PLAN.md`（進度正本，私有端）→ `CLAUDE.md`（repo 規則） |
-| 新機接手、環境裝不起來、缺依賴 | `references/setup.md` |
-| 從零做一支新片 | `references/film-from-zero.md` |
-| 改畫面、卡片、字幕、色票、第 0 幀 | `references/graphics.md` |
-| 改動畫、吉祥物、鏡頭、節奏不過 | `references/animation.md` |
-| 改旁白、換音色、多角色、混音、音量 | `references/audio.md` |
-| precheck 某道門不過 | `references/gates.md` |
-| 匯出、發布、合規、授權 | `references/deliver-publish.md` |
-| 選題、鉤子、節奏、畫面要依據 | skill `viral-scout` |
-| 這份文件說的實作在哪個檔 | `references/sources.md`（每段對應的實作檔與上游 repo） |
+| 步 | 指令／動作 | 驗收 |
+|---|---|---|
+| 0 選題 | `viral-scout`，先查 `refs/` 帳本 | `TREATMENT.md` 有爆款證據行 |
+| 1 建目錄 | `cp -r films/nerf films/<片名>`；清 `out dist qa audit/*.log 舊片.mp4`；`build.sh` 的 `OUT=` 改片名；`scripts/mascot_install.sh films/<片名>`；寫 `rhythm-profile`（對談 `dialogue`、地圖 `map`、資料卡留空） | — |
+| 2 寫檔 | `TREATMENT.md`、`narration.md`、`SOURCES.md`、`meta/facts.md`、`index.html`、`mix.py`、`cast.json`、三份 caption（`references/film-from-zero.md`） | `grep -c '^## ' narration.md` ≥ 4；末句問號 |
+| 2b 口語化 | 照 genie-humanizer 逐句改台灣口語，寫 `audit/humanize.md`（首行 `narration_sha:`，WRITING §7 第 10 條） | precheck「口語化（humanize）」OK |
+| 3 反方稽核 | `scripts/devils.sh films/<片名>`，逐爭點寫 `audit/verdicts.md` | exit 0；每爭點有 VERDICT |
+| 4 建置 | `cd films/<片名> && bash build.sh` | `<片名>.mp4` > 0；`out/narration-report.json` 有 `words` |
+| 5 目視自評 | `scripts/qa_sheet.sh films/<片名>`，看 `qa/sheet.jpg` 寫 `qa/review_log.md` | 七項各 ≥ 8，`video_sha` 對得上 |
+| 6 閘門 | `python3 scripts/precheck.py films/<片名>` | exit 0 才准發 |
+| 7 匯出 | `scripts/deliver.sh films/<片名>/<片名>.mp4` | `dist/` 三檔 > 0，時長差 ≤ 0.2s |
+| 8 發布（要人點頭） | `scripts/publish/`（`references/deliver-publish.md`） | `meta/published.json` 有三平台連結 |
 
-決議理由查 `DECISIONS.md`（已裁決的不重議）；寫稿細則 `docs/WRITING.md`；品牌與視覺 `BRAND.md`；配音選型 `VOICE.md`。這四份在流水線私有端，技能包不帶。
-
-## 不准違反的
-
-1. **爆款第一**。選題、鉤子、節奏、畫面一律先調 `viral-scout` 拿證據，至少一支 ≥ 10 萬播放，寫進該片 `TREATMENT.md` 的「爆款證據：」行（連結＋播放數），再 append 到自己的 `refs/VIRAL-LEDGER.md`。沒這行 `precheck.py` 不給過。題材不設限。
-2. **源頭先對，閘門只驗收**。問題修在產生它的地方（稿子、`index.html`、`build.sh`／`deliver.sh`），不靠閘門擋下再退回重做。**放寬任何閘門基準要使用者目視核准。**
-3. **對外發布、刪平台貼文前停下問使用者**；對談改編稿要使用者核過才建置。其餘（建置、匯出、precheck、改本機檔）全自動，不用問。
-4. **建置不併發**。`films/*/build.sh` 一次只跑一支，兩個同時寫 `out/` 會壞片。
-5. **新片格式是深夜對談（女主＋Clawd Bot）**，範本 `films/nerf/`。`films/dating-bill/` 是舊的資料卡格式，不要當模板。
-6. **稿子禁防衛性中立語言**（最高嚴重度）：不准出現「問法不同」「不能直接比較」「不代表全部」這類沒資訊的自我辯護句。限定範圍寫進事實本身。
-7. **對談台詞不能照抄**爆款原稿直譯（相似度 > 0.6 擋），只借結構。
-8. **兩個 Python 不可互換**：配音用 `.venv/bin/python`，`precheck.py` 與 `cdp.py` 用系統 `python3`，`mix.py` 用 `$LIB/.venv/bin/python`。
-
-## 最短路徑
-
-在流水線根目錄（公開版＝技能包目錄）跑：
-
-```bash
-cp -r films/nerf films/<片名>                     # 範本開新片，改 narration.md 與 index.html
-cd films/<片名> && bash build.sh                 # 旁白→混音→檢查→渲染→合軌→節奏閘
-cd ../.. && scripts/qa_sheet.sh films/<片名>      # 看 qa/sheet.jpg，寫 qa/review_log.md
-python3 scripts/precheck.py films/<片名>          # exit 0 才准發
-scripts/deliver.sh films/<片名>/<片名>.mp4        # → dist/ 三平台
-# 發布要人點頭：scripts/publish/
-```
+`build.sh` 順序固定：旁白 → 字幕閱讀時長 → 事件表 → 混音 → 尋幀一致 → 藏字檢查 → 渲染（8–10 分鐘）→ 合軌 → 節奏閘。檢查排在渲染前，不要調順序。
 
 ## 收尾
 
-改完程式要跑：
+改了程式就跑：
 
 ```bash
 for t in tests/test_*.py;  do python3 "$t" || echo "FAIL $t"; done
 for t in tests/test_*.mjs; do node    "$t" || echo "FAIL $t"; done
 ```
 
-然後更新 `PLAN.md` 該步狀態、同步 memory `state/vibe-shorts.md`、commit。驗過的新命令或新教訓補回本技能包的 `references/`。
+然後更新 `PLAN.md` 該步狀態、同步 memory `state/vibe-shorts.md`、commit。驗過的新命令或新規則改進本技能包對應段落（改原句，不另加）。
+
+## 查表
+
+- 新機接手、缺依賴、聲音範本、裝機驗收 → `references/setup.md`
+- 第 2 步每個檔寫什麼、反方稽核與自評格式 → `references/film-from-zero.md`
+- 改畫面、`index.html` 契約、渲染指令、視覺規格、色票、第 0 幀封面 → `references/graphics.md`
+- 改動畫、吉祥物 `poseAt`、`seek_check`、節奏基準 → `references/animation.md`
+- 改旁白、音色、多角色、混音、`voice.py` 失敗 → `references/audio.md`
+- precheck 某道門不過、改閘門要跑哪些測試 → `references/gates.md`
+- 匯出細節、發布指令、AI 揭露與授權、數據回饋 → `references/deliver-publish.md`
+- 某段說法對應的實作檔與上游 repo（衝突以實作為準） → `references/sources.md`

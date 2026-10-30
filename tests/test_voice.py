@@ -28,6 +28,11 @@ if got != want:
     fails.append(f"數字讀法錯：{ {n: g for n, g in got.items() if g != want[n]} }")
 if v.similarity("平均每一百四十九個人", "平均每149个人") < 0.99:
     fails.append("Whisper 吐阿拉伯數字時核稿要算念對")
+if v.similarity("二〇二二年，CNN 報導台灣是「行人地獄」。", "2022年CNN报道台湾是行人地狱") < v.SIM_MIN \
+        or v.similarity("從二〇二三年開始，預計五年做完。", "从2023年开始预计五年做完") < 0.99:
+    fails.append("年份逐字念（二〇二二年），Whisper 吐 2022年 時核稿要算念對")
+if v.similarity("二〇二二年", "2023年") > 0.9:
+    fails.append("年份念錯（2022→2023）核稿不能放過")
 if v.similarity("妳吃飯了嗎？", "你吃饭了吗?") < 0.99 or v.similarity("她說隨便，改得好", "他说随便,改的好") < 0.99:
     fails.append("同音代名詞／助詞（她他、妳你、得的）核稿要算念對")
 if v.similarity("蛤，那個很醜欸。", "哈?那个很丑诶") < 0.99 or v.similarity("你有在算喔？", "你有在算哦") < 0.99:

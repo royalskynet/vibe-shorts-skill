@@ -59,7 +59,10 @@ HOMOPHONE = str.maketrans({"她": "他", "它": "他", "牠": "他", "妳": "你
 
 
 def norm(s: str) -> str:
-    """Whisper 會把念出來的「一百四十九」寫成「149」，比對前轉回中文讀法，不然念對也算錯。"""
+    """Whisper 會把念出來的「一百四十九」寫成「149」，比對前轉回中文讀法，不然念對也算錯。
+    年份是逐字念的：稿寫「二〇二二年」、Whisper 吐「2022年」，兩邊都歸成「二零二二年」
+    （10-30 pedestrian-hell 兩句年份句念對卻卡 0.83／0.87，因為 2022 被拼成「二千零二十二」）。"""
+    s = re.sub(r"\d{4}(?=年)", lambda m: "".join(DIGIT[int(c)] for c in m.group()), s).replace("〇", "零")
     s = re.sub(r"\d+", lambda m: spell(int(m.group())), s)
     return to_simplified(PUNCT.sub("", s)).translate(HOMOPHONE)
 

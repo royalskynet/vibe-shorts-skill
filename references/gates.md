@@ -4,13 +4,9 @@
 python3 scripts/precheck.py films/<片名>      # exit 0 = 全過
 ```
 
-零 token，全機械判定。`scripts/precheck.py` 是**實作正本**，下表是導覽與修法；閾值以檔案頂端常數為準。
+`scripts/precheck.py` 是實作正本，閾值以檔頂常數為準；下表是導覽與修法。
 
-## 最高原則：源頭先對，閘門只驗收
-
-（使用者 2026-10-20 定）問題修在**產生它的地方** —— 寫稿、`index.html`、`build.sh`／`deliver.sh`，不是靠閘門擋下再退回重做。
-
-閘門的假設不符片型就**改閘門**（用 `rhythm-profile` 分流），不要扭曲片子去過門。但 **閘門基準改動要使用者目視核准**（`rhythm_check.py` 的 map 基準就是這樣放寬的），不准自己放寬。
+修在源頭、放寬基準要使用者目視核准（`SKILL.md` 硬規則 2）。
 
 ## 門一覽
 
@@ -29,7 +25,7 @@ python3 scripts/precheck.py films/<片名>      # exit 0 = 全過
 | 門 | 要什麼 |
 |---|---|
 | 說明文字存在 | `meta/caption-{shorts,reels,threads}.txt` 三份都有 |
-| 三份互不相同 | 三份 sha256 全不同（複製貼上會被平台壓低觸及） |
+| 三份互不相同 | 三份 sha256 全不同 |
 | 結尾提問 | 每份以問號收尾 |
 | AI 揭露 | 每份含「合成語音」與「程式」（`docs/COMPLIANCE.md` 的標準句） |
 | 列出來源 | 每份有以「來源」開頭的行 |
@@ -60,11 +56,6 @@ python3 scripts/precheck.py films/<片名>      # exit 0 = 全過
 
 ## 改了閘門要跑的測試
 
-```bash
-for t in tests/test_*.py;  do python3 "$t" || echo "FAIL $t"; done
-for t in tests/test_*.mjs; do node    "$t" || echo "FAIL $t"; done
-```
-
-對應關係：`precheck.py` → `test_precheck_copy.py`、`test_precheck_cover.py`、`test_precheck_review.py`、`test_story_gates.py`、`test_storyboard_rows.py`；`rhythm_check.py` → `test_rhythm_profile.py`；`seek_check.mjs` → `test_seek_check.py`；`textless_check.mjs` → `test_textless_check.py`；`clawd-bot-shot.mjs` → `test_mascot_pose.mjs`、`test_mascot_sync.py`；`devils.sh` → `test_devils_gate.py`；`voice.py` → `test_voice.py`、`test_voice_reusable.py`；發布腳本 → `test_meta_publish.py`、`test_social.py`、`test_threads_post.py`、`test_yt_upload.py`、`test_yt_channel_guard.py`、`test_tokens.py`、`test_stats.py`、`test_funnel.py`。
+全套跑法見 `SKILL.md`「收尾」。對應關係：`precheck.py` → `test_precheck_copy.py`、`test_precheck_cover.py`、`test_precheck_review.py`、`test_story_gates.py`、`test_storyboard_rows.py`；`rhythm_check.py` → `test_rhythm_profile.py`；`seek_check.mjs` → `test_seek_check.py`；`textless_check.mjs` → `test_textless_check.py`；`clawd-bot-shot.mjs` → `test_mascot_pose.mjs`、`test_mascot_sync.py`；`devils.sh` → `test_devils_gate.py`；`voice.py` → `test_voice.py`、`test_voice_reusable.py`；發布腳本 → `test_meta_publish.py`、`test_social.py`、`test_threads_post.py`、`test_yt_upload.py`、`test_yt_channel_guard.py`、`test_tokens.py`、`test_stats.py`、`test_funnel.py`。
 
 改到閘門或發布腳本，對應測試要能在邏輯改錯時失敗。負向斷言在 `set -e` 下用 `if cmd; then exit 1; fi`，不要用 `!`。

@@ -115,6 +115,19 @@ def sha_of(p: Path) -> str:
     return hashlib.sha256(p.read_bytes()).hexdigest() if p.is_file() else "none"
 
 
+def humanize_problems(film: Path):
+    """audit/humanize.md 首行 `narration_sha: <sha256>` 要等於現在的 narration.md；有改動清單或寫「無需改」。"""
+    p = film / "audit" / "humanize.md"
+    if not p.is_file():
+        return ["沒有 audit/humanize.md：照 genie-humanizer 逐句改成台灣口語後寫戳記（docs/WRITING.md §7）"]
+    lines = p.read_text(encoding="utf-8").splitlines()
+    if not lines or lines[0].strip() != f"narration_sha: {sha_of(film / 'narration.md')}":
+        return ["humanize 戳記跟現在的 narration.md 不符（改稿後要重過）"]
+    if not any(ln.strip() for ln in lines[1:]):
+        return ["humanize.md 沒寫改了哪些句（或「無需改」）"]
+    return []
+
+
 def audit_problems(film: Path):
     """反方稽核門（docs/WRITING.md §4）：證據包合格、每個爭點都有裁決、裁決綁的是現在的稿與來源。"""
     pack, ver = film / "audit" / "devils-advocate.md", film / "audit" / "verdicts.md"
@@ -161,6 +174,9 @@ def shot_grid_exempt(film: Path):
     prof = f.read_text(encoding="utf-8").strip() if f.is_file() else ""
     if prof == "map":
         return "地圖格式連續運鏡沒有硬切，場景偵測切不出卡片，不比格線"
+    if prof == "calm":
+        # 靜態科普換卡是原地交叉淡化，沒有硬切（使用者 2026-10-30 核准，對標 DemDuhNk1ZR 0 次硬切）
+        return "靜態格式換卡原地淡化，沒有硬切，場景偵測切不出卡片"
     if prof == "dialogue":
         # 對談片一句一鏡，鏡長跟著台詞長短走，本來就沒有固定格線（使用者 2026-10-17 核准免除）
         return "對談格式一句一鏡，鏡長隨台詞長短，沒有卡片格線"
@@ -287,9 +303,21 @@ def norm(s):
 
 
 def to_trad(s):
-    """Whisper 中文常吐簡體，比對前轉繁。opencc 不在就讓它炸：不能安靜地判成相似度低。"""
-    return subprocess.run(["opencc", "-c", "s2t"], input=s, capture_output=True,
+    """Whisper 中文常吐簡體，比對前轉繁。opencc 不在就讓它炸：不能安靜地判成相似度低。
+    用台灣用字（s2tw）：s2t 會把「为／里」轉成「爲／裏」，跟稿上的「為／裡」對不上，念對也扣分。"""
+    return subprocess.run(["opencc", "-c", "s2tw"], input=s, capture_output=True,
                           text=True, check=True).stdout
+
+
+def asr_norm(s):
+    """聽寫比稿用的正規化：數字寫法與異體字不算念錯（跟 voice.py 單句核稿同一套數字讀法）。
+    10-30 pedestrian-hell：Whisper 把念對的「三百六十六」「二〇二二」寫成 366、2022，
+    「台」轉成「臺」，整片 0.845 卡在 0.85 門下；真正聽錯的只有幾個字。門檻不動，只修量法。"""
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from verify_tts import DIGIT, spell
+    s = re.sub(r"\d{4}(?=年)", lambda m: "".join(DIGIT[int(c)] for c in m.group()), s)
+    s = re.sub(r"\d+", lambda m: spell(int(m.group())), s)
+    return norm(s).replace("〇", "零").replace("臺", "台")
 
 
 def asr_problems(sections, rep, duration):
@@ -298,17 +326,17 @@ def asr_problems(sections, rep, duration):
     if not words:
         return ["成片聽不到旁白"]
     problems = []
-    script = norm("".join(b for _, b in sections))
+    script = asr_norm("".join(b for _, b in sections))
     # 一次轉完再按換行切回各字詞（opencc 保留換行），不必每個字詞叫一次 opencc
     trad = to_trad("\n".join(w["w"].replace("\n", "") for w in words)).split("\n")
-    heard = norm("".join(trad))
+    heard = asr_norm("".join(trad))
     sim = difflib.SequenceMatcher(None, script, heard, autojunk=False).ratio()
     if sim < ASR_SIM_MIN:
         problems.append(f"聽寫與旁白稿相似度 {sim:.2f}，門檻 {ASR_SIM_MIN}（沒混進成片或吃字）")
     if words[0]["t0"] > LEAD_SILENCE_MAX:
         problems.append(f"第一個字在 {words[0]['t0']}s，開場空白上限 {LEAD_SILENCE_MAX}s")
-    q = norm(sentences(dict(sections)["提問"])[-1])
-    chars = [(c, w["t0"]) for w, t in zip(words, trad) for c in norm(t)]
+    q = asr_norm(sentences(dict(sections)["提問"])[-1])
+    chars = [(c, w["t0"]) for w, t in zip(words, trad) for c in asr_norm(t)]
     # 提問句不一定是最後幾個字：Whisper 會在片尾音樂上幻聽出「請不吝點讚訂閱…明鏡與點點欄目」
     # （dating-bill 10-15），所以在後段每個起點比一次，取最像的那段。
     best = (0.0, None)
@@ -655,6 +683,9 @@ def main() -> int:
         results.append(check("旁白稿結構", not problems, "；".join(problems)))
     else:
         results.append(check("旁白稿結構", False, "找不到 narration.md，格式見 docs/WRITING.md §3"))
+    # 13a. 口語門（使用者 10-29 定）：稿要過 humanize，戳記綁現在的稿，改稿後要重過
+    problems = humanize_problems(film)
+    results.append(check("口語化（humanize）", not problems, "；".join(problems)))
 
     # 13b. 抄襲閘：台詞不得沿用爆款原稿的直譯句。原稿檔不進版控，找不到就擋（沒比對不算過）。
     orig = Path(__file__).resolve().parent.parent / "refs" / "dialogue-corpus" / "originals-zh.md"

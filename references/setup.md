@@ -23,18 +23,12 @@ git clone https://github.com/eternityspring/reelbench-skills ~/dev/reelbench-ski
 
 ## Python 環境
 
-兩個 interpreter，用途不可互換：
-
 ```bash
 uv venv .venv --python 3.12
 uv pip install --python .venv/bin/python 'mlx-audio==0.5.8'
 ```
 
-- `.venv/bin/python` —— 配音（`voice.py`）、核稿、拆解。
-- 系統 `python3` —— `precheck.py`、`rhythm_check.py`。
-- `$LIB/.venv/bin/python` —— 各片的 `mix.py`。
-
-`mix.py` 也吃 `LIB` 環境變數找音訊工具，所以要 `LIB="$LIB" "$LIB/.venv/bin/python" mix.py`。
+三個 interpreter 的分工見 `SKILL.md` 硬規則 10。
 
 `mlx-audio` 的 Qwen3-TTS 只跑 Apple Silicon。沒有 Apple Silicon、或不想自備聲紋，就把 `build.sh` 的「旁白」那步換成渲染器內建的 `"$LIB/.venv/bin/python" "$LIB/core/tts/tts_zh.py" lines.json out/voice`（edge-tts，線上、不用參考音，音色是微軟的 neural voice），其餘步驟不變。注意它不做核稿重念，`narration_check.py` 的字幕對齊門要自己顧。
 
@@ -52,7 +46,7 @@ uv pip install --python .venv/bin/python 'mlx-audio==0.5.8'
 
 缺檔時 `voice.py` 會直接報這段補法再退出。第二個聲音（對談用）同理，預設讀 `assets/voice/clawd24k.wav`＋`clawd-script.txt`。
 
-換了參考音，`lines.json` 的 `who` 會帶新檔名，舊音色念過的句子不會被沿用——**所以不要中途換**，整片音色會前後不一。
+換參考音的影響見 `audio.md`（`who` 指紋）。
 
 ## 吉祥物素材
 

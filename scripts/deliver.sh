@@ -26,7 +26,7 @@ SRC="${1:?用法: deliver.sh <成片.mp4>}"
 # ffmpeg 還在 mux，我對 16.8 MB 的半成品跑匯出，得到 moov atom not found。
 # 檔案被誰開著是唯一可靠的判斷，檔案大小看起來正常不代表寫完了。
 if lsof -t -- "$SRC" >/dev/null 2>&1; then
-  echo "還有行程開著 $SRC，應該是建置沒跑完。等它結束再來。" >&2
+  echo "還有行程開著 ${SRC}，應該是建置沒跑完。等它結束再來。" >&2
   exit 1
 fi
 
@@ -84,7 +84,7 @@ for target in shorts:shorts reels:reels threads:reels; do
   # negative_cts_offsets：B-frame 的顯示延遲原本靠 elst 抵銷，拿掉 elst 後畫面起點變 0.067s、
   # 比聲音晚 2 幀。改用負的 CTS 讓畫面仍從 0 開始。下面檢查影音起點一致。
   vs=$(ffprobe -v error -select_streams v:0 -show_entries stream=start_time -of csv=p=0 "$final")
-  [ "$vs" = "0.000000" ] || { echo "$final 畫面起點 $vs，影音不同步" >&2; exit 1; }
+  [ "$vs" = "0.000000" ] || { echo "$final 畫面起點 ${vs}，影音不同步" >&2; exit 1; }
   # 交付檔不准比成片短（被 preset 默默裁掉就會少結尾）
   python3 -c "import sys; a,b=map(float,sys.argv[1:]); sys.exit(abs(a-b)>0.2)" \
     "$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$SRC")" \

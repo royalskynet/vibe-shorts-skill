@@ -95,6 +95,12 @@ ghost = [{"w": c, "t0": dur, "t1": dur} for c in "请不吝点赞订阅转发打
 check("片尾幻聽仍過", pc.asr_problems(good, {"words": rep["words"] + ghost}, dur) == [])
 check("只有幻聽沒提問擋", pc.asr_problems(good, {"words": words_of(no_q) + ghost}, dur) != [])
 
+# 聽寫正規化（10-30 pedestrian-hell）：數字寫法、台灣用字不算念錯；真的念錯的數字還是不同
+check("聽寫阿拉伯數字＝稿上中文數字", pc.asr_norm("二〇二四年，全台有三百六十六個行人") == pc.asr_norm("2024年全臺有366個行人"))
+check("簡體为里轉台灣用字", pc.to_trad("为里").strip() == "為裡")
+check("念錯的數字不能算對", pc.asr_norm("三百六十六") != pc.asr_norm("336"))
+check("念錯的年份不能算對", pc.asr_norm("二〇二二年") != pc.asr_norm("2023年"))
+
 # 爆款證據閘（12a）
 V = "# 題\n\n爆款證據：YT｜56.3萬｜某片｜https://www.youtube.com/shorts/x\n"
 check("爆款證據過", pc.viral_problems(V) == [])
