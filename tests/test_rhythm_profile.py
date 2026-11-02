@@ -18,8 +18,8 @@ dl = r.PROFILES["dialogue"]
 if (dl[0], dl[1], dl[3]) != (0.64, 9.0, 0.90):
     fails.append(f"dialogue 基準要是 10 支 IG 對談爆款全過的邊界 ≤64%、≤9 秒、≥0.90：{dl}")
 ca = r.PROFILES["calm"]
-if (ca[0], ca[1], ca[3]) != (1.0, 70.0, 0.20):
-    fails.append(f"calm 基準要是使用者 2026-10-30 核准的 ≤100%、≤70 秒、≥0.20：{ca}")
+if (ca[0], ca[1], ca[3]) != (1.0, 95.0, 0.15):
+    fails.append(f"calm 基準要是使用者 2026-11-01 核准的 ≤100%、≤95 秒、≥0.15：{ca}")
 with tempfile.TemporaryDirectory() as d:
     mp4 = Path(d) / "x.mp4"
     if r.profile_of(mp4) != "vkv":

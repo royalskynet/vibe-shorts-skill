@@ -15,9 +15,9 @@ description: 營銷號短片流水線：建片、畫面、動畫、配音、閘�
 
 1. **爆款第一**：選題、鉤子、節奏、畫面先調 `viral-scout`，至少一支 ≥ 10 萬播放，寫進 `TREATMENT.md`「爆款證據：」行（連結＋播放數）並 append `refs/VIRAL-LEDGER.md`。沒這行 precheck 不過。題材不設限。
 2. **源頭先對，閘門只驗收**：修在產生問題的地方（稿子、`index.html`、`build.sh`／`deliver.sh`）。閘門假設不符片型就分流（`rhythm-profile`），不扭曲片子；**新增或放寬任何閘門基準要使用者目視核准**。
-3. **要人點頭**：發布到 YT／IG／Threads、刪已發貼文、對談改編稿開始建置、放寬閘門。其餘（建置、匯出、precheck、改本機檔）全自動。
+3. **要人點頭**：稿子（全文貼出，說通過才跑 `scripts/approve.py`，沒戳記 `voice.py` 不建）、發布到 YT／IG／Threads、刪已發貼文、對談改編稿開始建置、放寬閘門。其餘（建置、匯出、precheck、改本機檔）全自動。
 4. **建置不併發**：`films/*/build.sh` 一次一支，兩支同寫 `out/` 會壞片。
-5. **新片複製 `films/nerf/`**（深夜對談：女主＋Clawd Bot，three.js）。`films/dating-bill/` 是舊資料卡格式，不當模板。
+5. **新片複製 `films/elected-dictator/`**（單人旁白科普，11-01 起）；`films/nerf/` 只在使用者點名對談格式時用，`films/france`、`films/dating-bill/` 是舊引擎，不當模板。
 6. **稿子禁防衛性中立語言**（最高嚴重度）：不寫「問法不同」「不能直接比較」「不代表全部」這類自我辯護句；限定範圍寫進事實本身（年份、地點、對象）。
 7. **台詞不照抄**爆款原稿（相似度 > 0.6 擋），只借結構（節拍、三段加碼、回扣）。
 8. **`render(t)` 只依賴 `t`**：不累積狀態、不讀 `Date.now()`、不發外部請求。所有姿態、鏡頭、轉場都是 `t` 的純函數（`references/animation.md`）。
@@ -30,17 +30,17 @@ description: 營銷號短片流水線：建片、畫面、動畫、配音、閘�
 | 步 | 指令／動作 | 驗收 |
 |---|---|---|
 | 0 選題 | `viral-scout`，先查 `refs/` 帳本 | `TREATMENT.md` 有爆款證據行 |
-| 1 建目錄 | `cp -r films/nerf films/<片名>`；清 `out dist qa audit/*.log 舊片.mp4`；`build.sh` 的 `OUT=` 改片名；`scripts/mascot_install.sh films/<片名>`；寫 `rhythm-profile`（對談 `dialogue`、地圖 `map`、資料卡留空） | — |
+| 1 建目錄 | `cp -r films/elected-dictator films/<片名>`；清 `out dist qa audit/*.log 舊片.mp4`；`build.sh` 的 `OUT=` 改片名；`scripts/mascot_install.sh films/<片名>`；寫 `rhythm-profile`（對談 `dialogue`、地圖 `map`、資料卡留空） | — |
 | 2 寫檔 | `TREATMENT.md`、`narration.md`、`SOURCES.md`、`meta/facts.md`、`index.html`、`mix.py`、`cast.json`、三份 caption（`references/film-from-zero.md`） | `grep -c '^## ' narration.md` ≥ 4；末句問號 |
 | 2b 口語化 | 照 genie-humanizer 逐句改台灣口語，寫 `audit/humanize.md`（首行 `narration_sha:`，WRITING §7 第 10 條） | precheck「口語化（humanize）」OK |
 | 3 反方稽核 | `scripts/devils.sh films/<片名>`，逐爭點寫 `audit/verdicts.md` | exit 0；每爭點有 VERDICT |
 | 4 建置 | `cd films/<片名> && bash build.sh` | `<片名>.mp4` > 0；`out/narration-report.json` 有 `words` |
-| 5 目視自評 | `scripts/qa_sheet.sh films/<片名>`，看 `qa/sheet.jpg` 寫 `qa/review_log.md` | 七項各 ≥ 8，`video_sha` 對得上 |
+| 5 目視自評 | `scripts/qa_sheet.sh films/<片名>`，看 `qa/sheet.jpg` 與每卡尾幀 `qa/cards.jpg` 寫 `qa/review_log.md` | 七項各 ≥ 8，`video_sha` 對得上 |
 | 6 閘門 | `python3 scripts/precheck.py films/<片名>` | exit 0 才准發 |
 | 7 匯出 | `scripts/deliver.sh films/<片名>/<片名>.mp4` | `dist/` 三檔 > 0，時長差 ≤ 0.2s |
 | 8 發布（要人點頭） | `scripts/publish/`（`references/deliver-publish.md`） | `meta/published.json` 有三平台連結 |
 
-`build.sh` 順序固定：旁白 → 字幕閱讀時長 → 事件表 → 混音 → 尋幀一致 → 藏字檢查 → 渲染（8–10 分鐘）→ 合軌 → 節奏閘。檢查排在渲染前，不要調順序。
+`build.sh` 順序固定：旁白 → 字幕閱讀時長 → 事件表 → 混音 → 尋幀一致 → 藏字檢查 → 渲染（8–10 分鐘）→ 合軌 → 旁白核對 → 節奏閘。檢查排在渲染前，不要調順序。
 
 ## 收尾
 

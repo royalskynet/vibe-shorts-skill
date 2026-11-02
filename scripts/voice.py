@@ -23,7 +23,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
-from precheck import parse_narration, sentences  # noqa: E402
+from precheck import approval_problems, parse_narration, question_waived, sentences, story_problems  # noqa: E402
 from verify_tts import norm as asr_norm, to_simplified  # noqa: E402
 
 TTS_MODEL = "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-bf16"
@@ -141,7 +141,15 @@ def main():
     film = Path(sys.argv[1]).resolve()
     vdir = film / "out" / "voice"
     vdir.mkdir(parents=True, exist_ok=True)
-    items = lines_of(parse_narration((film / "narration.md").read_text(encoding="utf-8")))
+    sections = parse_narration((film / "narration.md").read_text(encoding="utf-8"))
+    # 稿子結構門先擋（提問太晚、單行超長、一行兩句）：elected-dictator 11-01 為此空建片三次
+    prof = film / "rhythm-profile"
+    dialogue = prof.is_file() and prof.read_text(encoding="utf-8").strip() == "dialogue"
+    probs = story_problems(sections, dialogue, bool(question_waived(film))) + approval_problems(film)
+    if probs:
+        print("旁白稿結構沒過，先改稿再建片：\n  " + "\n  ".join(probs))
+        return 1
+    items = lines_of(sections)
     cast = film / "cast.json"
     global TEMPO
     pace = json.loads((film / "pace.json").read_text()) if (film / "pace.json").is_file() else {}

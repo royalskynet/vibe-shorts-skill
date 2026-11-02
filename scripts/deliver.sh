@@ -71,10 +71,12 @@ for target in shorts:shorts reels:reels threads:reels; do
   # AAC 再轉一代成 128k 會把真峰值推高：scam-map 2026-10-14 實測 -1.6 → +0.8 dBTP，
   # 先降音量 2.5 dB 再轉也只到 -0.8。所以 Shorts（不受 128k 限制）沿用 scrub 的 192k 不再轉；
   # reels／threads 改從混音原檔 out/mix.wav 只編一次，loudnorm 壓到 -14 LUFS／TP -2（實測 -2.0）。
-  if [ "$label" = shorts ]; then
+  # Shorts 原本沿用 scrub 的 192k，elected-dictator 11-01 實測 -0.7 dBTP（規格 ≤ -1），改成也從 mix.wav 只編一次、192k。
+  if [ -f "$DIR/out/mix.wav" ]; then
+    br=$([ "$label" = shorts ] && echo 192k || echo 128k)
+    amap=(-i "$DIR/out/mix.wav" -map 0:v -map 1:a); acodec=(-af loudnorm=I=-14:TP=-2:LRA=11 -c:a aac -b:a "$br" -ar 48000 -flags:a +bitexact -shortest)
+  elif [ "$label" = shorts ]; then
     amap=(-map 0); acodec=(-c:a copy)
-  elif [ -f "$DIR/out/mix.wav" ]; then
-    amap=(-i "$DIR/out/mix.wav" -map 0:v -map 1:a); acodec=(-af loudnorm=I=-14:TP=-2:LRA=11 -c:a aac -b:a 128k -ar 48000 -flags:a +bitexact -shortest)
   else
     echo "找不到 $DIR/out/mix.wav，$label 從成片音訊轉 128k，真峰值可能超標" >&2
     amap=(-map 0); acodec=(-c:a aac -b:a 128k -ar 48000 -flags:a +bitexact)

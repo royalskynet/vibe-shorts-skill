@@ -31,6 +31,11 @@ SCRUB = Path.home() / "dev/reelbench-skills/skills/video-scrub/scripts/video-scr
 # 必備段照 refs/vkv/narrative-templates.md 六段式的 1、4、5、6，順序固定；其他段可自由加。
 # 門檻寫在這裡不寫在片子裡：受評者改不到評分器（fix 10368）。
 STORY_SECTIONS = ["鉤子", "轉折", "落點", "提問"]
+LINE_MAX_CHARS = 35       # 旁白每行上限（docs/寫稿原則.md 第 1 條，使用者 2026-11-01 定）
+# 提問句＋其後各段的純字上限。elected-dictator 實測：44 字 → 提問在片尾 13.9s 過；
+# 多 9 字以上就落在 15s 外，建片三次才修好。語速約 3.7 字/秒，片尾音樂約 2s，(15-2)×3.7≈48。
+TAIL_MAX_CHARS = 48
+CAPTION_LIMITS = {"reels": 2200, "threads": 500}   # 同 publish/meta_publish.py PLAT[*]["limit"]
 HOOK_MAX_CHARS = 25       # 鉤子第一句的字數上限；旁白約 4–5 字／秒，25 字約 5 秒講完
 LEAD_SILENCE_MAX = 0.5    # 第一個字最晚幾秒出現；開場不留空白
 ASR_SIM_MIN = 0.85        # 成片聽寫與旁白稿的字元相似度；低於此＝沒混進去或吃字
@@ -125,6 +130,23 @@ def humanize_problems(film: Path):
         return ["humanize 戳記跟現在的 narration.md 不符（改稿後要重過）"]
     if not any(ln.strip() for ln in lines[1:]):
         return ["humanize.md 沒寫改了哪些句（或「無需改」）"]
+    return []
+
+
+def approval_problems(film: Path):
+    """稿子要使用者審過才建片（使用者 2026-11-01 定）：audit/approved.md 首行 `narration_sha:` 等於現在的稿，
+    第二行起要有「核准：<使用者原話>」。只有 scripts/approve.py 寫這個檔，使用者說通過才跑；改稿後要重審。
+
+    value-life 11-01：使用者口述改結尾，agent 自己補一句提問就開建，被喊停「稿子我還沒審通過」。
+    """
+    p = film / "audit" / "approved.md"
+    if not p.is_file():
+        return ["稿子還沒經使用者審：把 narration.md 全文貼給使用者，說通過後跑 scripts/approve.py"]
+    lines = p.read_text(encoding="utf-8").splitlines()
+    if not lines or lines[0].strip() != f"narration_sha: {sha_of(film / 'narration.md')}":
+        return ["核准後稿子又改過：新稿要重新給使用者審，通過後重跑 scripts/approve.py"]
+    if not any(ln.startswith("核准：") and ln[3:].strip() for ln in lines[1:]):
+        return ["approved.md 沒有「核准：<使用者原話>」"]
     return []
 
 
@@ -252,7 +274,18 @@ def sentences(text):
     return [s for s in re.findall(r"[^。？！?!\n]+[。？！?!]?", text) if s.strip()]
 
 
-def story_problems(sections, dialogue=False):
+def question_waived(film: Path):
+    """meta/no-question.txt 有寫原因＝這支片使用者核准不要片尾提問，回傳原因；否則 None。
+
+    使用者 2026-11-01 核准 value-life 收尾不放問句。豁免只免「提問」段與片尾聽到問句，
+    說明欄仍要以問句結尾（留言區用），其他結構門照擋。空檔不算。
+    """
+    f = film / "meta" / "no-question.txt"
+    reason = f.read_text(encoding="utf-8").strip() if f.is_file() else ""
+    return reason or None
+
+
+def story_problems(sections, dialogue=False, no_question=False):
     """旁白稿結構：必備段齊、順序對、有內容；鉤子短且跟觀眾有關或丟問題；提問段以問號收尾。
 
     dialogue（對談格式）不比「鉤子跟觀眾有關」：對談片第一句是角色對角色說話，
@@ -260,13 +293,14 @@ def story_problems(sections, dialogue=False):
     """
     titles = [t for t, _ in sections]
     body = dict(sections)
-    problems = [f"缺「{s}」段" for s in STORY_SECTIONS if s not in titles]
+    req = [s for s in STORY_SECTIONS if not (no_question and s == "提問")]
+    problems = [f"缺「{s}」段" for s in req if s not in titles]
     if problems:
         return problems
-    order = [titles.index(s) for s in STORY_SECTIONS]
+    order = [titles.index(s) for s in req]
     if order != sorted(order):
-        problems.append("必備段順序要是 " + "→".join(STORY_SECTIONS))
-    problems += [f"「{s}」段是空的" for s in STORY_SECTIONS if not body[s]]
+        problems.append("必備段順序要是 " + "→".join(req))
+    problems += [f"「{s}」段是空的" for s in req if not body[s]]
     if problems:
         return problems
     first = sentences(body["鉤子"])[0].strip()
@@ -274,9 +308,24 @@ def story_problems(sections, dialogue=False):
         problems.append(f"鉤子第一句 {len(norm(first))} 字，上限 {HOOK_MAX_CHARS}")
     if not dialogue and "你" not in first and not re.search(r"[？?]", first):
         problems.append("鉤子第一句沒有「你」也沒有問題，跟觀眾無關")
-    last = sentences(body["提問"])[-1].strip()
-    if not re.search(r"[？?]$", last):
-        problems.append("提問段最後一句不是問句")
+    if "提問" in body:
+        last = sentences(body["提問"])[-1].strip()
+        if not re.search(r"[？?]$", last):
+            problems.append("提問段最後一句不是問句")
+        q_at = titles.index("提問")
+        tail = len(norm(last)) + sum(len(norm(b)) for _, b in sections[q_at + 1:])
+        if tail > TAIL_MAX_CHARS:
+            problems.append(f"提問句加後面各段 {tail} 字，上限 {TAIL_MAX_CHARS}（提問要在片尾 {QUESTION_TAIL_S}s 內）")
+    if not dialogue:
+        # 寫稿原則：一句講完一個因果、≤35 字；voice.py 依句末標點切句，一行兩個會讓卡片數對不上
+        for _, b in sections:
+            for ln in (x.strip() for x in b.splitlines()):
+                if not ln:
+                    continue
+                if len(norm(ln)) > LINE_MAX_CHARS:
+                    problems.append(f"「{ln[:12]}…」{len(norm(ln))} 字，每行上限 {LINE_MAX_CHARS}")
+                if len(re.findall(r"[。？！?!]", ln.rstrip("。？！?!」』）)"))):
+                    problems.append(f"「{ln[:12]}…」一行有兩個句末標點，拆行或改逗號")
     return problems
 
 
@@ -335,6 +384,8 @@ def asr_problems(sections, rep, duration):
         problems.append(f"聽寫與旁白稿相似度 {sim:.2f}，門檻 {ASR_SIM_MIN}（沒混進成片或吃字）")
     if words[0]["t0"] > LEAD_SILENCE_MAX:
         problems.append(f"第一個字在 {words[0]['t0']}s，開場空白上限 {LEAD_SILENCE_MAX}s")
+    if "提問" not in dict(sections):   # 只有 question_waived 的片會走到這裡（結構門先擋）
+        return problems
     q = asr_norm(sentences(dict(sections)["提問"])[-1])
     chars = [(c, w["t0"]) for w, t in zip(words, trad) for c in asr_norm(t)]
     # 提問句不一定是最後幾個字：Whisper 會在片尾音樂上幻聽出「請不吝點讚訂閱…明鏡與點點欄目」
@@ -484,6 +535,20 @@ def main() -> int:
     for p, text in captions.items():
         has_q = bool(re.search(r"[？?]\s*(留言[^\n]*)?$", text, re.M))
         results.append(check(f"{p} 結尾提問", has_q, "" if has_q else "沒有以問號結尾的句子"))
+
+    # 3c. 字數上限與提問同步（elected-dictator 11-01：Threads 553 字、結尾還是舊稿提問，發布前才發現）
+    for p, text in captions.items():
+        lim = CAPTION_LIMITS.get(p)
+        if lim:
+            results.append(check(f"{p} 說明字數", len(text) <= lim, f"{len(text)} 字，上限 {lim}"))
+    narr_f = film / "narration.md"
+    if narr_f.is_file():
+        secs = dict(parse_narration(narr_f.read_text(encoding="utf-8")))
+        if secs.get("提問"):
+            q = norm(sentences(secs["提問"])[-1])
+            for p, text in captions.items():
+                ok = q in norm(text)
+                results.append(check(f"{p} 說明含片尾提問", ok, "" if ok else "說明欄沒有旁白的提問句，可能還是舊稿"))
 
     # 4. 每份說明文字都帶 AI 揭露
     for p, text in captions.items():
@@ -679,10 +744,14 @@ def main() -> int:
     dialogue = (film / "rhythm-profile").is_file() and \
         (film / "rhythm-profile").read_text(encoding="utf-8").strip() == "dialogue"
     if narr.is_file():
-        problems = story_problems(sections, dialogue)
-        results.append(check("旁白稿結構", not problems, "；".join(problems)))
+        nq = question_waived(film)
+        problems = story_problems(sections, dialogue, bool(nq))
+        results.append(check("旁白稿結構", not problems, "；".join(problems) or (f"免片尾提問：{nq}" if nq else "")))
     else:
         results.append(check("旁白稿結構", False, "找不到 narration.md，格式見 docs/WRITING.md §3"))
+    # 13a0. 稿子核准門（使用者 11-01 定）：voice.py 建片前也擋
+    problems = approval_problems(film)
+    results.append(check("稿子已核准", not problems, "；".join(problems)))
     # 13a. 口語門（使用者 10-29 定）：稿要過 humanize，戳記綁現在的稿，改稿後要重過
     problems = humanize_problems(film)
     results.append(check("口語化（humanize）", not problems, "；".join(problems)))
@@ -711,7 +780,7 @@ def main() -> int:
                  or rep.get("narration_sha") != hashlib.sha256(narr.read_bytes()).hexdigest())
         if stale:
             results.append(check("旁白進成片", False, "報告跟現在的成片或旁白稿對不上，重跑 narration_check.py"))
-        elif story_problems(sections, dialogue):
+        elif story_problems(sections, dialogue, bool(question_waived(film))):
             results.append(check("旁白進成片", False, "旁白稿結構沒過，先修稿"))
         else:
             problems = asr_problems(sections, rep, duration_of(master))

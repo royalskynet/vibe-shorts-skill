@@ -58,6 +58,11 @@ check("好稿結構過", pc.story_problems(good) == [])
 check("好稿聽寫過", pc.asr_problems(good, rep, dur) == [])
 
 # 結構：缺段、順序、空段、鉤子太長、鉤子跟觀眾無關、提問不是問句
+check("單行超過 35 字擋", pc.story_problems(secs(GOOD.replace("## 機制\n", "## 機制\n" + "一" * 36 + "。\n"))) != [])
+check("一行兩個句號擋", pc.story_problems(secs(GOOD.replace("## 機制\n", "## 機制\n好笑嗎？他當年也沒靠政變。\n"))) != [])
+TAIL = GOOD + "## 收尾\n不是有選舉就叫民主，是我們一起守住規則，它才算數。\n"
+check("提問加收尾 44 字過", pc.story_problems(secs(TAIL)) == [])
+check("提問加收尾超過上限擋", pc.story_problems(secs(TAIL.replace("才算數。", "才算數，而且每一次選舉都一樣。"))) != [])
 check("缺落點擋", pc.story_problems(secs(GOOD.replace("## 落點", "## 其他"))) != [])
 swapped = GOOD.replace("## 轉折", "## X").replace("## 落點", "## 轉折").replace("## X", "## 落點")
 check("段落順序錯擋", pc.story_problems(secs(swapped)) != [])
@@ -108,6 +113,39 @@ check("1.7億過", pc.viral_problems(V.replace("56.3萬", "1.7億")) == [])
 check("沒證據行擋", pc.viral_problems("# 題\n") != [])
 check("沒連結擋", pc.viral_problems(V.replace("https://www.youtube.com/shorts/x", "")) != [])
 check("不到10萬擋", pc.viral_problems(V.replace("56.3萬", "5萬")) != [])
+
+# 單片免片尾提問（value-life 11-01 使用者核准）
+import re as _re, tempfile as _tf
+from pathlib import Path as _P
+NOQ = _re.sub(r"## 提問\n[^#]*", "", GOOD)
+check("沒提問段預設擋", pc.story_problems(secs(NOQ)) != [])
+check("豁免後沒提問段過", pc.story_problems(secs(NOQ), no_question=True) == [])
+check("豁免不免單行超長", pc.story_problems(secs(NOQ.replace("## 機制\n", "## 機制\n" + "一" * 36 + "。\n")), no_question=True) != [])
+check("豁免不免缺落點", pc.story_problems(secs(NOQ.replace("## 落點", "## 其他")), no_question=True) != [])
+with _tf.TemporaryDirectory() as d:
+    f = _P(d)
+    check("沒豁免檔不算", pc.question_waived(f) is None)
+    (f / "meta").mkdir(); (f / "meta" / "no-question.txt").write_text("  \n", encoding="utf-8")
+    check("空豁免檔不算", pc.question_waived(f) is None)
+    (f / "meta" / "no-question.txt").write_text("使用者核准", encoding="utf-8")
+    check("有原因才算", pc.question_waived(f) == "使用者核准")
+check("沒提問段聽寫不查問句", pc.asr_problems(secs(NOQ), {"words": [{"w": "x", "t0": 0.0}]}, 60) == [] or
+      all("提問" not in p for p in pc.asr_problems(secs(NOQ), {"words": [{"w": "x", "t0": 0.0}]}, 60)))
+
+# 稿子核准門（11-01）
+import hashlib as _h, subprocess as _sp
+with _tf.TemporaryDirectory() as d:
+    f = _P(d); (f / "narration.md").write_text(GOOD, encoding="utf-8")
+    check("沒核准檔擋", pc.approval_problems(f) != [])
+    r = _sp.run([sys.executable, str(_P(__file__).resolve().parent.parent / "scripts" / "approve.py"), d, "稿子通過"], capture_output=True)
+    check("approve.py 寫完過", r.returncode == 0 and pc.approval_problems(f) == [])
+    (f / "narration.md").write_text(GOOD + "多一句。\n", encoding="utf-8")
+    check("核准後改稿擋", pc.approval_problems(f) != [])
+    sha = _h.sha256((f / "narration.md").read_bytes()).hexdigest()
+    (f / "audit" / "approved.md").write_text(f"narration_sha: {sha}\n核准：\n", encoding="utf-8")
+    check("沒寫使用者原話擋", pc.approval_problems(f) != [])
+    r = _sp.run([sys.executable, str(_P(__file__).resolve().parent.parent / "scripts" / "approve.py"), d, "  "], capture_output=True)
+    check("approve.py 空原話拒絕", r.returncode != 0)
 
 if fails:
     print("FAIL\n  " + "\n  ".join(fails))
