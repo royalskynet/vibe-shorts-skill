@@ -4,7 +4,7 @@
 
 ```bash
 scripts/deliver.sh films/<片名>/<片名>.mp4
-# → films/<片名>/dist/<片名>-{shorts,reels,threads}.mp4
+# → films/<片名>/dist/<片名>-{shorts,reels,threads}.mp4、<片名>-cover.jpg
 ```
 
 1. **色彩範圍**：渲染輸出全範圍 `yuvj420p`，IG／Threads 要標準範圍 → `scale=in_range=pc:out_range=tv,format=yuv420p`＋`-color_range tv`。
@@ -12,7 +12,7 @@ scripts/deliver.sh films/<片名>/<片名>.mp4
 3. **元資料清理**：`video-scrub run` 刪來源身份字串。
 4. **音訊與容器**：shorts 沿用 clean 檔音軌；reels／threads 從 `out/mix.wav` 只重編一次 AAC 128k／48kHz，套 `loudnorm=I=-14:TP=-2:LRA=11`；`-use_editlist 0`（Meta 吃不下 edit list）、`-movflags +faststart+negative_cts_offsets`。
 
-驗證：交付檔不比成片短、時長差 ≤ 0.2s、影音 `start_time` 都是 0、無 `elst` 原子，最後 `$FFMPEG_SKILL/check.py --platform`。
+驗證：交付檔不比成片短、時長差 ≤ 0.2s、影音 `start_time` 都是 0、無 `elst` 原子，最後 `$FFMPEG_SKILL/check.py --platform`。最後 `scripts/cover.sh` 從第 0 幀產 IG 封面 `<片名>-cover.jpg`（縮到 810x1440 置中、四周補第 0 幀左上角底色，IG 網格 3:4 裁切看得到完整第 0 幀；可單獨跑 `scripts/cover.sh films/<片名>/<片名>.mp4`）。
 
 ## 發布（要使用者點頭，不可收回）
 
@@ -24,7 +24,7 @@ python3 scripts/publish/yt_upload.py   films/<片名> --yes   # YouTube Shorts
 
 發完把平台連結與時間寫進 `meta/published.json`。設定與權杖見 `docs/PUBLISH-SETUP.md`；權杖值不進 repo、不進對話。YT OAuth 在 Testing 狀態 7 天到期，`scripts/publish/tokens.py` 報到期日。
 
-公開網址衛生：路徑用 16+ 位十六進位隨機 token、不用片名、每次換新；只開那一支 mp4，不暴露資料夾；平台抓完立刻關 funnel 伺服器。
+公開網址衛生：路徑用 16+ 位十六進位隨機 token、不用片名、每次換新；只開要發的 mp4（有 `dist/<片名>-cover.jpg` 就加開這張，IG Reels 帶 `cover_url`，Threads 沒封面參數仍用第 0 幀），不暴露資料夾；平台抓完立刻關 funnel 伺服器。
 
 刪已發貼文也要點頭；IG 貼文 API 刪不掉，走網頁（`docs/HANDOFF-threads-delete.md`）。
 

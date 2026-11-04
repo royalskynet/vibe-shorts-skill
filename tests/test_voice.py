@@ -52,6 +52,19 @@ tl2, _ = v.layout([("鉤子", "a", 2.0), ("揭曉", "b", 1.0), ("揭曉", "c", 1
 assert abs(tl2[1]["t0"] - (v.LEAD + 2.0 + 1.5)) < 1e-6, tl2
 assert abs(tl2[2]["t0"] - (tl2[1]["t1"] + 1.0)) < 1e-6, tl2
 
+# 逗號短語字幕卡：切在逗號、短語太短併入下一個、時長照字數分、首尾貼齊整句
+ph = v.phrases("所以，可是二〇二四年選總統，台北藍綠只差六百四十一票。", 1.0, 6.0)
+assert [p["text"] for p in ph] == ["所以，可是二〇二四年選總統", "台北藍綠只差六百四十一票"], ph
+assert ph[0]["t0"] == 1.0 and ph[-1]["t1"] == 6.0 and ph[0]["t1"] == ph[1]["t0"], ph
+assert abs((ph[0]["t1"] - 1.0) - 5.0 * 13 / 25) < 0.01, ph   # 12 字＋逗號停頓 1 ／ 總權重 25
+assert [p["text"] for p in v.phrases("你會不會也覺得，台北就是藍大於綠？", 0, 3)] == ["你會不會也覺得", "台北就是藍大於綠？"]
+assert len(v.phrases("開票只贏三千兩百五十四票。", 0, 2)) == 1
+assert [p["text"] for p in v.phrases("一二三四五，六。", 0, 2)] == ["一二三四五，六"]   # 尾巴太短併回前一個
+
+# pace.json 的 tail：片尾卡要的空白
+_, d3 = v.layout([("鉤子", "a", 2.0)], tail=3.0)
+assert d3 == round(v.LEAD + 2.0 + 3.0, 3), d3
+
 # 聲紋範本缺檔：要在 import 後才檢查，並給補法（公開版不帶聲紋音檔，eager read 會變 traceback）
 from pathlib import Path  # noqa: E402
 

@@ -30,21 +30,33 @@ SCRUB = Path.home() / "dev/reelbench-skills/skills/video-scrub/scripts/video-scr
 # 故事閘門（2026-10-13 加）。費馬片 24 道工藝門全過，卻沒有鉤子、轉折、人生落點、片內提問、旁白。
 # 必備段照 refs/vkv/narrative-templates.md 六段式的 1、4、5、6，順序固定；其他段可自由加。
 # 門檻寫在這裡不寫在片子裡：受評者改不到評分器（fix 10368）。
-STORY_SECTIONS = ["鉤子", "轉折", "落點", "提問"]
+# 提問只寫在說明欄，正片不放（使用者 2026-11-03 定；取代 10-13 起的片尾提問與 value-life 的 no-question 豁免）
+STORY_SECTIONS = ["鉤子", "轉折", "落點"]
 LINE_MAX_CHARS = 35       # 旁白每行上限（docs/寫稿原則.md 第 1 條，使用者 2026-11-01 定）
-# 提問句＋其後各段的純字上限。elected-dictator 實測：44 字 → 提問在片尾 13.9s 過；
-# 多 9 字以上就落在 15s 外，建片三次才修好。語速約 3.7 字/秒，片尾音樂約 2s，(15-2)×3.7≈48。
-TAIL_MAX_CHARS = 48
 CAPTION_LIMITS = {"reels": 2200, "threads": 500}   # 同 publish/meta_publish.py PLAT[*]["limit"]
 HOOK_MAX_CHARS = 25       # 鉤子第一句的字數上限；旁白約 4–5 字／秒，25 字約 5 秒講完
 LEAD_SILENCE_MAX = 0.5    # 第一個字最晚幾秒出現；開場不留空白
 ASR_SIM_MIN = 0.85        # 成片聽寫與旁白稿的字元相似度；低於此＝沒混進去或吃字
-QUESTION_TAIL_S = 15      # 結尾提問要在片尾幾秒內講出來
-QUESTION_SIM_MIN = 0.7    # 片尾聽寫與提問句的相似度
+# 轉折要推翻前一句，不是接一句總結（2026-11-01 使用者核准）。爆款是「不是他不香，而是旁邊太香」；
+# 垃圾桶片的「日本跟台北街上垃圾桶都很少，差別在家裡好不好丟」整段刪掉前面照樣成立＝假轉折。
+TRANSITION_CUES = ["但", "可是", "不過", "卻", "其實", "偏偏", "反而", "結果", "原來", "問題是", "真正"]
+TRANSITION_BAN = ["再看", "先看"]
+# 「你」或問句的密度（每 100 字）：爆款樣本 0.54、我們 0.23（2026-11-01 使用者核准擋）
+YOU_PER_100_MIN = 0.4
+YOU_MIN_CHARS = 40        # 短於這個字數不比密度，避免一句話的稿被誤擋
 COVER_LUMA_MIN = 24       # 第 0 幀平均亮度（0–255）；limited range 全黑是 16
 COVER_TEXT_H = 0.04       # 封面大字：字高至少畫面高的 4%（1920 → 77px；角落小字 28–46px，卡片大標 110px 起）
 COVER_TEXT_MIN = 2        # 大字裡至少幾個中文字或數字
 COVER_OCR_CONF = 60
+# 單人旁白語速上限（字／秒）。字數＝timeline.js 各句中英數字元，分母＝片長扣 pace.json 的片尾靜止卡 tail。
+# 對標無邊探索 refs/boundless/metrics.tsv 的 cps 4.85–5.53；taipei-silence 11-03 量到 5.9，聽起來太趕。
+PACE_CPS_MAX = 5.6
+PACE_REF = "無邊探索 4.85–5.53"
+# 內頁大標（11-04 使用者定：只留封面大標）。單人旁白片首卡之後每卡尾幀的螢幕字，字級 ≥ 此值就擋。
+# 字級＝window.TEXTS 文字框高 ÷ TEXT_BOX_RATIO（say() 的框是 y−px 到 y+0.25px，elected-dictator 同規格）。
+# 72px：畫內數字 64px 要過，舊版內頁標題 110px、副標 56px 以外沒有中間值；片尾系列名 68px 不算大標。
+HEADLINE_PX = 72
+TEXT_BOX_RATIO = 1.25
 
 
 VERDICTS = {"PRO_WINS", "CON_WINS", "SPLIT", "UNRESOLVED"}
@@ -238,6 +250,72 @@ def facts_exempt(film: Path):
     return "對談格式且稿中沒有三位數以上的數字"
 
 
+def read_json(p: Path):
+    return json.loads(p.read_text(encoding="utf-8")) if p.is_file() else None
+
+
+def pace_cps(film: Path):
+    """單人旁白片（cast.json 有 host、clawd 是空陣列）回 (字／秒, 字數, 分母秒)；其他片型或缺檔回 None。"""
+    cast = read_json(film / "cast.json")
+    tl_f = film / "timeline.js"
+    if not (cast and cast.get("host") and cast.get("clawd") == [] and tl_f.is_file()):
+        return None
+    t = tl_f.read_text(encoding="utf-8")
+    tl = json.loads(t[t.index("{"):t.rindex("}") + 1])
+    n = sum(len(norm(ln["text"])) for ln in tl["lines"])
+    tail = (read_json(film / "pace.json") or {}).get("tail", 0)
+    denom = tl["dur"] - tail
+    return (n / denom if denom > 0 else float("inf")), n, denom
+
+
+def pace_problems(film: Path):
+    r = pace_cps(film)
+    if r is None:
+        return []
+    cps, n, denom = r
+    if cps > PACE_CPS_MAX:
+        return [f"{cps:.2f} 字／秒（{n} 字／{denom:.1f}s）> {PACE_CPS_MAX}，{PACE_REF}；降 pace.json tempo 或刪字"]
+    return []
+
+
+def mascot_problems(film: Path):
+    """mascot/ 裝了（mascot_install.sh），index.html 就要 import poseAt 並 drawImage 畫上去。"""
+    if not (film / "mascot").is_dir():
+        return []
+    page = film / "index.html"
+    html = page.read_text(encoding="utf-8") if page.is_file() else ""
+    miss = [w for w in ("poseAt", "drawImage(") if w not in html]
+    return [f"mascot 已安裝但 index.html 沒畫（缺 {'、'.join(miss)}）"] if miss else []
+
+
+def headline_applies(film: Path):
+    """單人旁白片（cast.json 有 host）且 index.html 定義 window.TEXTS 才適用。"""
+    cast = read_json(film / "cast.json")
+    page = film / "index.html"
+    return bool(cast and cast.get("host") and page.is_file()
+                and "window.TEXTS" in page.read_text(encoding="utf-8"))
+
+
+def headline_problems(cards):
+    """cards＝scripts/headline_check.mjs 的輸出 cards（首卡之後各卡尾幀的文字框）；字級 ≥ HEADLINE_PX 的列出來。"""
+    out = []
+    for c in cards:
+        for b in c["boxes"]:
+            px = b["h"] / TEXT_BOX_RATIO
+            if px >= HEADLINE_PX:
+                out.append(f"卡 {c['card']} @{c['t']}s「{b['text']}」{px:.0f}px")
+    return out
+
+
+def headline_scan(film: Path):
+    """跑 headline_check.mjs 取樣；node 失敗就丟錯（沒取到樣不算過）。"""
+    js = Path(__file__).resolve().parent / "headline_check.mjs"
+    r = subprocess.run(["node", str(js), str(film)], capture_output=True, text=True, timeout=300)
+    if r.returncode != 0:
+        raise RuntimeError(f"headline_check.mjs exit {r.returncode}：{(r.stderr or r.stdout).strip()[-300:]}")
+    return json.loads(r.stdout.strip().splitlines()[-1])["cards"]
+
+
 def check(name: str, ok: bool, detail: str = "") -> bool:
     print(f"{'OK  ' if ok else 'FAIL'} {name}" + (f" — {detail}" if detail else ""))
     return ok
@@ -274,26 +352,15 @@ def sentences(text):
     return [s for s in re.findall(r"[^。？！?!\n]+[。？！?!]?", text) if s.strip()]
 
 
-def question_waived(film: Path):
-    """meta/no-question.txt 有寫原因＝這支片使用者核准不要片尾提問，回傳原因；否則 None。
-
-    使用者 2026-11-01 核准 value-life 收尾不放問句。豁免只免「提問」段與片尾聽到問句，
-    說明欄仍要以問句結尾（留言區用），其他結構門照擋。空檔不算。
-    """
-    f = film / "meta" / "no-question.txt"
-    reason = f.read_text(encoding="utf-8").strip() if f.is_file() else ""
-    return reason or None
-
-
-def story_problems(sections, dialogue=False, no_question=False):
-    """旁白稿結構：必備段齊、順序對、有內容；鉤子短且跟觀眾有關或丟問題；提問段以問號收尾。
+def story_problems(sections, dialogue=False):
+    """旁白稿結構：必備段齊、順序對、有內容；鉤子短且跟觀眾有關或丟問題；落點收尾、不放提問段。
 
     dialogue（對談格式）不比「鉤子跟觀眾有關」：對談片第一句是角色對角色說話，
     對標的 IG 對談爆款開頭多是陳述句（docs/RESEARCH-dialogue.md），使用者 2026-10-17 核准免除。
     """
     titles = [t for t, _ in sections]
     body = dict(sections)
-    req = [s for s in STORY_SECTIONS if not (no_question and s == "提問")]
+    req = STORY_SECTIONS
     problems = [f"缺「{s}」段" for s in req if s not in titles]
     if problems:
         return problems
@@ -308,14 +375,24 @@ def story_problems(sections, dialogue=False, no_question=False):
         problems.append(f"鉤子第一句 {len(norm(first))} 字，上限 {HOOK_MAX_CHARS}")
     if not dialogue and "你" not in first and not re.search(r"[？?]", first):
         problems.append("鉤子第一句沒有「你」也沒有問題，跟觀眾無關")
-    if "提問" in body:
-        last = sentences(body["提問"])[-1].strip()
-        if not re.search(r"[？?]$", last):
-            problems.append("提問段最後一句不是問句")
-        q_at = titles.index("提問")
-        tail = len(norm(last)) + sum(len(norm(b)) for _, b in sections[q_at + 1:])
-        if tail > TAIL_MAX_CHARS:
-            problems.append(f"提問句加後面各段 {tail} 字，上限 {TAIL_MAX_CHARS}（提問要在片尾 {QUESTION_TAIL_S}s 內）")
+    # 轉折段第一句要推翻前一句：要有轉折連詞，不是「再看／先看」這種接續
+    tr = sentences(body["轉折"])[0].strip() if body.get("轉折") else ""
+    if tr and (any(tr.startswith(w) for w in TRANSITION_BAN)
+               or not any(c in tr for c in TRANSITION_CUES)):
+        problems.append("轉折段第一句沒有轉折連詞（但／可是／不過／卻／其實／偏偏／反而／結果／原來／問題是／真正），"
+                        "也別用「再看／先看」開頭")
+    if "提問" in titles:
+        problems.append("正片不放「提問」段：問題只寫在說明欄（使用者 11-03 定）")
+    # 落點之後不准再有段：多出來的收尾段沒事實可講，只能生金句
+    if titles[-1] != "落點":
+        problems.append("落點後面還有段（" + "、".join(titles[titles.index("落點") + 1:]) + "）：結論收在落點")
+    # 旁白要像跟人講話：每 100 字至少 0.4 次「你」或問句
+    flat = "".join(b for _, b in sections)
+    n = len(norm(flat))
+    if n >= YOU_MIN_CHARS:
+        hits = flat.count("你") + len(re.findall(r"[？?]", flat))
+        if hits < YOU_PER_100_MIN * n / 100:
+            problems.append(f"整篇 {n} 字只有 {hits} 次「你」或問句，每 100 字要 {YOU_PER_100_MIN} 次（像在對人講話）")
     if not dialogue:
         # 寫稿原則：一句講完一個因果、≤35 字；voice.py 依句末標點切句，一行兩個會讓卡片數對不上
         for _, b in sections:
@@ -370,7 +447,7 @@ def asr_norm(s):
 
 
 def asr_problems(sections, rep, duration):
-    """拿成片聽寫比旁白稿：有沒有混進去、有沒有吃字、開場空白、片尾有沒有講出提問。"""
+    """拿成片聽寫比旁白稿：有沒有混進去、有沒有吃字、開場空白。"""
     words = rep.get("words") or []
     if not words:
         return ["成片聽不到旁白"]
@@ -384,23 +461,6 @@ def asr_problems(sections, rep, duration):
         problems.append(f"聽寫與旁白稿相似度 {sim:.2f}，門檻 {ASR_SIM_MIN}（沒混進成片或吃字）")
     if words[0]["t0"] > LEAD_SILENCE_MAX:
         problems.append(f"第一個字在 {words[0]['t0']}s，開場空白上限 {LEAD_SILENCE_MAX}s")
-    if "提問" not in dict(sections):   # 只有 question_waived 的片會走到這裡（結構門先擋）
-        return problems
-    q = asr_norm(sentences(dict(sections)["提問"])[-1])
-    chars = [(c, w["t0"]) for w, t in zip(words, trad) for c in asr_norm(t)]
-    # 提問句不一定是最後幾個字：Whisper 會在片尾音樂上幻聽出「請不吝點讚訂閱…明鏡與點點欄目」
-    # （dating-bill 10-15），所以在後段每個起點比一次，取最像的那段。
-    best = (0.0, None)
-    for i in range(max(0, len(chars) - 3 * len(q)), max(0, len(chars) - len(q)) + 1) if q else []:
-        win = chars[i:i + len(q)]
-        s = difflib.SequenceMatcher(None, q, "".join(c for c, _ in win), autojunk=False).ratio()
-        if s > best[0]:
-            best = (s, win[0][1])
-    tail_sim, q_at = best
-    if tail_sim < QUESTION_SIM_MIN:
-        problems.append(f"片尾聽到的不是提問句（相似度 {tail_sim:.2f}）")
-    elif q_at < duration - QUESTION_TAIL_S:
-        problems.append(f"提問在 {q_at}s 講出，要在最後 {QUESTION_TAIL_S}s 內")
     return problems
 
 
@@ -481,7 +541,8 @@ def main() -> int:
                              f"{f.stat().st_size // 1048576} MB" if f.is_file() else str(f)))
 
     # 1b. 第 0 幀當封面要看得到東西。
-    # Threads API 沒有封面參數、IG 不傳 cover_url 時都拿第 0 幀當封面。
+    # Threads API 沒有封面參數、IG 不傳 cover_url 時都拿第 0 幀當封面
+    # （deliver.sh 產 dist/<片名>-cover.jpg 後 meta_publish.py 會帶 cover_url，但 Threads 與舊片仍用第 0 幀）。
     # 2026-10-18 踩到：codex 骨架片頭 0.4s 從黑淡入，codex 公開後 IG／Threads 封面一片黑。
     for p in PLATFORMS:
         f = dist / f"{name}-{p}.mp4"
@@ -744,9 +805,8 @@ def main() -> int:
     dialogue = (film / "rhythm-profile").is_file() and \
         (film / "rhythm-profile").read_text(encoding="utf-8").strip() == "dialogue"
     if narr.is_file():
-        nq = question_waived(film)
-        problems = story_problems(sections, dialogue, bool(nq))
-        results.append(check("旁白稿結構", not problems, "；".join(problems) or (f"免片尾提問：{nq}" if nq else "")))
+        problems = story_problems(sections, dialogue)
+        results.append(check("旁白稿結構", not problems, "；".join(problems)))
     else:
         results.append(check("旁白稿結構", False, "找不到 narration.md，格式見 docs/WRITING.md §3"))
     # 13a0. 稿子核准門（使用者 11-01 定）：voice.py 建片前也擋
@@ -755,6 +815,26 @@ def main() -> int:
     # 13a. 口語門（使用者 10-29 定）：稿要過 humanize，戳記綁現在的稿，改稿後要重過
     problems = humanize_problems(film)
     results.append(check("口語化（humanize）", not problems, "；".join(problems)))
+    # 13a1. 語速門（11-04）：taipei-silence tempo 1.3 量到 5.9 字／秒，比無邊探索最快的 5.53 還快，其他門都沒擋
+    r = pace_cps(film)
+    problems = pace_problems(film)
+    results.append(check("語速", not problems, "；".join(problems) if problems else
+                         f"{r[0]:.2f} 字／秒 ≤ {PACE_CPS_MAX}" if r else "非單人旁白片，不適用"))
+    # 13a2. 吉祥物接線門（11-04）：taipei-silence 有 mascot/ 但 index.html 沒 import poseAt、沒 drawImage，成片沒角色
+    problems = mascot_problems(film)
+    results.append(check("吉祥物接線", not problems, "；".join(problems) if problems else
+                         "poseAt＋drawImage 都在" if (film / "mascot").is_dir() else "沒裝 mascot，不適用"))
+    # 13a3. 內頁大標門（11-04）：使用者對標無邊探索，只留封面大標；內頁只放系列標、插畫、字幕、出處
+    if not headline_applies(film):
+        results.append(check("內頁大標", True, "非單人旁白片或頁面沒有 window.TEXTS，不適用"))
+    else:
+        try:
+            cards = headline_scan(film)
+            problems = headline_problems(cards)
+            results.append(check("內頁大標", not problems, "內頁有大標，只留封面：" + "；".join(problems) if problems
+                                 else f"{len(cards)} 張內頁尾幀沒有 ≥{HEADLINE_PX}px 的字"))
+        except Exception as e:
+            results.append(check("內頁大標", False, f"取樣失敗：{e}"))
 
     # 13b. 抄襲閘：台詞不得沿用爆款原稿的直譯句。原稿檔不進版控，找不到就擋（沒比對不算過）。
     orig = Path(__file__).resolve().parent.parent / "refs" / "dialogue-corpus" / "originals-zh.md"
@@ -780,7 +860,7 @@ def main() -> int:
                  or rep.get("narration_sha") != hashlib.sha256(narr.read_bytes()).hexdigest())
         if stale:
             results.append(check("旁白進成片", False, "報告跟現在的成片或旁白稿對不上，重跑 narration_check.py"))
-        elif story_problems(sections, dialogue, bool(question_waived(film))):
+        elif story_problems(sections, dialogue):
             results.append(check("旁白進成片", False, "旁白稿結構沒過，先修稿"))
         else:
             problems = asr_problems(sections, rep, duration_of(master))

@@ -23,7 +23,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
-from precheck import approval_problems, parse_narration, question_waived, sentences, story_problems  # noqa: E402
+from precheck import approval_problems, parse_narration, sentences, story_problems  # noqa: E402
 from verify_tts import norm as asr_norm, to_simplified  # noqa: E402
 
 TTS_MODEL = "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-bf16"
@@ -100,9 +100,9 @@ def lines_of(sections):
     return [(t, s.strip()) for t, body in sections for s in sentences(body) if s.strip()]
 
 
-def layout(items, gap_line=GAP_LINE, gap_section=GAP_SECTION):
+def layout(items, gap_line=GAP_LINE, gap_section=GAP_SECTION, tail=TAIL):
     """items＝[(段名, 句子, 秒數)] → 每句的起訖時間。換段的停頓比同段長。
-    片子目錄有 pace.json（{"gap_line": 秒, "gap_section": 秒}）就用它的停頓，給一句一卡、要停留看圖的片。"""
+    片子目錄有 pace.json（{"gap_line": 秒, "gap_section": 秒, "tail": 秒}）就用它的停頓；tail 給要放片尾卡的片。"""
     out, t, prev = [], LEAD, None
     for sec, text, dur in items:
         if prev is not None:
@@ -111,7 +111,35 @@ def layout(items, gap_line=GAP_LINE, gap_section=GAP_SECTION):
                     "t0": round(t, 3), "t1": round(t + dur, 3)})
         t += dur
         prev = sec
-    return out, round(t + TAIL, 3)
+    return out, round(t + tail, 3)
+
+
+PHRASE_MIN = 4  # 短於這個字數的短語併進下一個（「所以，」不單獨一卡）
+
+
+def phrases(text, t0, t1):
+    """一句在逗號、冒號、分號處切成字幕短語，起訖照字數比例分這句的時長（無邊探索一卡一短語、約 2 秒）。
+    逗號處多算 1 字的停頓。字幕去掉句末句號、逗號，問號保留。
+    ponytail: 比例分配，誤差約 0.2 秒；要更準改用 Whisper word_timestamps 對齊。"""
+    parts, cur = [], ""
+    for seg in re.findall(r"[^，：；]+[，：；]?", text):
+        cur += seg
+        if len(re.sub(r"[，：；。！？、]", "", cur)) >= PHRASE_MIN:
+            parts.append(cur)
+            cur = ""
+    if cur:
+        if parts:
+            parts[-1] += cur
+        else:
+            parts.append(cur)
+    weights = [len(re.sub(r"[，：；。！？、「」]", "", p)) + (1 if p[-1] in "，：；" else 0) for p in parts]
+    out, t, total = [], t0, sum(weights) or 1
+    for p, w in zip(parts, weights):
+        d = (t1 - t0) * w / total
+        out.append({"text": re.sub(r"[，：；。！]$", "", p), "t0": round(t, 3), "t1": round(t + d, 3)})
+        t += d
+    out[-1]["t1"] = round(t1, 3)
+    return out
 
 
 def similarity(want, got):
@@ -142,10 +170,10 @@ def main():
     vdir = film / "out" / "voice"
     vdir.mkdir(parents=True, exist_ok=True)
     sections = parse_narration((film / "narration.md").read_text(encoding="utf-8"))
-    # 稿子結構門先擋（提問太晚、單行超長、一行兩句）：elected-dictator 11-01 為此空建片三次
+    # 稿子結構門先擋（單行超長、一行兩句）：elected-dictator 11-01 為此空建片三次
     prof = film / "rhythm-profile"
     dialogue = prof.is_file() and prof.read_text(encoding="utf-8").strip() == "dialogue"
-    probs = story_problems(sections, dialogue, bool(question_waived(film))) + approval_problems(film)
+    probs = story_problems(sections, dialogue) + approval_problems(film)
     if probs:
         print("旁白稿結構沒過，先改稿再建片：\n  " + "\n  ".join(probs))
         return 1
@@ -204,12 +232,13 @@ def main():
             bad.append(f"{i + 1:02d} {text}（最好 {best[0]:.2f}：{best[2]}）")
         rows.append((sec, text, duration(vdir / name), round(best[0], 3), best[2]))
 
-    tl, dur = layout([(s, t, d) for s, t, d, _, _ in rows], pace.get("gap_line", GAP_LINE), pace.get("gap_section", GAP_SECTION))
+    tl, dur = layout([(s, t, d) for s, t, d, _, _ in rows], pace.get("gap_line", GAP_LINE), pace.get("gap_section", GAP_SECTION), pace.get("tail", TAIL))
     for x, (_, _, _, sim, heard), i in zip(tl, rows, range(len(rows))):
         x.update(file=f"{i + 1:02d}.wav", sim=sim, heard=heard,
                  who=who_of(x["text"], clawd_lines))
     lj.write_text(json.dumps({"dur": dur, "lines": tl}, ensure_ascii=False, indent=1), encoding="utf-8")
-    js = {"dur": dur, "lines": [{k: x[k] for k in ("section", "text", "t0", "t1", "who")} for x in tl]}
+    js = {"dur": dur, "lines": [{**{k: x[k] for k in ("section", "text", "t0", "t1", "who")},
+                                 "phrases": phrases(x["text"], x["t0"], x["t1"])} for x in tl]}
     (film / "timeline.js").write_text(
         "// scripts/voice.py 產生，不要手改。改稿後重跑 voice.py。\nwindow.TL = "
         + json.dumps(js, ensure_ascii=False) + ";\n", encoding="utf-8")

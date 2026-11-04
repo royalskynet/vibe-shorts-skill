@@ -2,7 +2,7 @@
 # 把一支成片轉成三個平台的交付檔，並清掉元資料。
 #
 # 用法：scripts/deliver.sh films/flt-11days/flt-11days.mp4
-# 產出：films/<名稱>/dist/<名稱>-{shorts,reels,threads}.mp4
+# 產出：films/<名稱>/dist/<名稱>-{shorts,reels,threads}.mp4、<名稱>-cover.jpg（IG 封面，見 cover.sh）
 #
 # 為什麼要三個檔而不是一個檔發三次：三個平台的時長上限和位元率不同，
 # shorts 上限 180 秒、reels 上限 90 秒。用同一個檔發，長片會被平台自己裁。
@@ -107,5 +107,9 @@ for label in shorts reels threads; do
 done
 
 echo
+echo "=== IG 安全封面（網格 3:4 裁切不切到大標）==="
+"$(dirname "$0")/cover.sh" "$SRC" "$OUT/$NAME-cover.jpg"
+
+echo
 echo "=== 交付檔 ==="
-ls -lh "$OUT"/*.mp4 | awk '{print $9, $5}'
+ls -lh "$OUT"/*.mp4 "$OUT/$NAME-cover.jpg" | awk '{print $9, $5}'
