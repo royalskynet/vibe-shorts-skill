@@ -11,6 +11,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(HERE), "scripts"))
 
 import precheck as pc  # noqa: E402
+import verify_tts as vt  # noqa: E402
 
 fails = []
 total = 0
@@ -100,6 +101,9 @@ check("聽寫阿拉伯數字＝稿上中文數字", pc.asr_norm("二〇二四年
 check("簡體为里轉台灣用字", pc.to_trad("为里").strip() == "為裡")
 check("念錯的數字不能算對", pc.asr_norm("三百六十六") != pc.asr_norm("336"))
 check("念錯的年份不能算對", pc.asr_norm("二〇二二年") != pc.asr_norm("2023年"))
+check("聽寫 97% ＝稿上百分之九十七", pc.asr_norm("有百分之九十七是百分之十的人") == pc.asr_norm("有97%是10%的人"))
+check("念錯的百分比不能算對", pc.asr_norm("百分之九十七") != pc.asr_norm("79%"))
+check("單句核稿 97% ＝百分之九十七", vt.norm("有百分之九十七是") == vt.norm("有97%是"))
 
 # 爆款證據閘（12a）
 V = "# 題\n\n爆款證據：YT｜56.3萬｜某片｜https://www.youtube.com/shorts/x\n"

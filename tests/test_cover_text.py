@@ -27,6 +27,31 @@ if pc.cover_big_text(HEAD + "\n4\t1\t1\t1\t1\t0\t0\t0\t10\t200\t-1\t", 1920):
 if len(pc.cover_big_text(tsv((111, 94, "A1")), 1920)) >= pc.COVER_TEXT_MIN:
     fails.append("只有 1 個數字不夠當封面字")
 
+# first_frame_text：整幅＋上 30% 各認一次，取字多的那次，不串接（11-05 democracy-noise）
+import types  # noqa: E402
+_real = pc.subprocess.run
+
+
+def fake_run(outs):
+    it = iter(outs)
+
+    def run(cmd, **kw):
+        if cmd[0] == "ffprobe":
+            return types.SimpleNamespace(stdout="1920\n")
+        if cmd[0] == "ffmpeg":
+            return types.SimpleNamespace(stdout=b"png")
+        return types.SimpleNamespace(stdout=next(it).encode())
+    return run
+
+
+pc.subprocess.run = fake_run([tsv((28, 96, "看懂")), tsv((144, 96, "民主"), (148, 93, "好"))])
+if pc.first_frame_text("x.mp4") != "民主好":
+    fails.append("整幅認不到、上半部認到大標時要算上半部")
+pc.subprocess.run = fake_run([tsv((144, 96, "亂")), tsv((144, 96, "亂"))])
+if len(pc.first_frame_text("x.mp4")) >= pc.COVER_TEXT_MIN:
+    fails.append("同一個字兩次都認到不能串成 2 字")
+pc.subprocess.run = _real
+
 if fails:
     print("FAIL", *fails, sep="\n  ")
     sys.exit(1)

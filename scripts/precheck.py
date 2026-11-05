@@ -441,6 +441,7 @@ def asr_norm(s):
     「台」轉成「臺」，整片 0.845 卡在 0.85 門下；真正聽錯的只有幾個字。門檻不動，只修量法。"""
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from verify_tts import DIGIT, spell
+    s = re.sub(r"(\d+)\s*[%％]", r"百分之\1", s)
     s = re.sub(r"\d{4}(?=年)", lambda m: "".join(DIGIT[int(c)] for c in m.group()), s)
     s = re.sub(r"\d+", lambda m: spell(int(m.group())), s)
     return norm(s).replace("〇", "零").replace("臺", "台")
@@ -496,9 +497,18 @@ def first_frame_text(path):
     h = int(subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
                             "stream=height", "-of", "csv=p=0", str(path)],
                            capture_output=True, text=True, check=True).stdout.strip())
-    r = subprocess.run(["tesseract", "stdin", "-", "-l", "chi_tra+eng", "--psm", "11", "tsv"],
-                       input=png, capture_output=True, check=True)
-    return cover_big_text(r.stdout.decode("utf-8", "replace"), h)
+    # 大標在上半部；下方插畫（40 人方陣）會打亂 tesseract 版面切分，整幅認不出、只裁上 30% 就認得
+    # （11-05 democracy-noise：整幅 0 字，上 30% 認出「民主好」；40% 會切到方陣第一排又認不出）。兩次取字多的那次，
+    # 不串接：同一個字兩次都認到不能湊成 2 字。字高仍以整幅高度算，判準不變。
+    top = subprocess.run(["ffmpeg", "-v", "error", "-i", "pipe:0", "-vf", "crop=iw:ih*0.3:0:0", "-f", "image2pipe",
+                          "-vcodec", "png", "-"], input=png, capture_output=True, check=True).stdout
+    best = ""
+    for img in (png, top):
+        r = subprocess.run(["tesseract", "stdin", "-", "-l", "chi_tra+eng", "--psm", "11", "tsv"],
+                           input=img, capture_output=True, check=True)
+        txt = cover_big_text(r.stdout.decode("utf-8", "replace"), h)
+        best = txt if len(txt) > len(best) else best
+    return best
 
 
 def main() -> int:
