@@ -34,6 +34,7 @@ SCRUB = Path.home() / "dev/reelbench-skills/skills/video-scrub/scripts/video-scr
 STORY_SECTIONS = ["鉤子", "轉折", "落點"]
 LINE_MAX_CHARS = 35       # 旁白每行上限（docs/寫稿原則.md 第 1 條，使用者 2026-11-01 定）
 CAPTION_LIMITS = {"reels": 2200, "threads": 500}   # 同 publish/meta_publish.py PLAT[*]["limit"]
+ENDING_BAN = ("總之", "所以說", "以上就是", "謝謝收看", "總結來說", "綜上")  # 落點不總結（WRITING.md §8.6，使用者 11-06 退 dunning-kruger「後面沒有爆點」）
 HOOK_MAX_CHARS = 25       # 鉤子第一句的字數上限；旁白約 4–5 字／秒，25 字約 5 秒講完
 LEAD_SILENCE_MAX = 0.5    # 第一個字最晚幾秒出現；開場不留空白
 ASR_SIM_MIN = 0.85        # 成片聽寫與旁白稿的字元相似度；低於此＝沒混進去或吃字
@@ -316,6 +317,30 @@ def headline_scan(film: Path):
     return json.loads(r.stdout.strip().splitlines()[-1])["cards"]
 
 
+def coldread_warnings(film: Path, master_sha: str):
+    """冷讀（稿／片）：scripts/coldread.sh 的產物首行 sha 對得上、末行 VERDICT: 通過。
+    ponytail: 使用者核准後改硬門（現在只印 WARN，不進 results、不改 exit code 與通過分母）。"""
+    out = []
+    for label, rel, key, sha in (("冷讀（稿）", "audit/coldread-script.md", "narration_sha", sha_of(film / "narration.md")),
+                                 ("冷讀（片）", "qa/coldread-film.md", "video_sha", master_sha)):
+        p = film / rel
+        lines = p.read_text(encoding="utf-8").splitlines() if p.is_file() else []
+        verdict = lines[-1].strip() if lines else ""
+        why = ""
+        if not lines:
+            why = (f"沒有 {rel}，跑 scripts/coldread.sh films/{film.name} "
+                   f"{'script' if key == 'narration_sha' else 'film'}")
+        elif lines[0].strip() != f"{key}: {sha}":
+            why = f"{rel} 的 {key} 對不上現在的{'稿' if key == 'narration_sha' else '成片'}，重跑冷讀"
+        elif lines and verdict not in ("VERDICT: 通過", "VERDICT: 不通過"):
+            why = f"{rel} 末行不是 VERDICT"
+        elif lines and verdict != "VERDICT: 通過":
+            why = f"{rel} 冷讀不通過，看裡面 [硬傷] 條目"
+        if why:
+            out.append((label, why))
+    return out
+
+
 def check(name: str, ok: bool, detail: str = "") -> bool:
     print(f"{'OK  ' if ok else 'FAIL'} {name}" + (f" — {detail}" if detail else ""))
     return ok
@@ -386,6 +411,9 @@ def story_problems(sections, dialogue=False):
     # 落點之後不准再有段：多出來的收尾段沒事實可講，只能生金句
     if titles[-1] != "落點":
         problems.append("落點後面還有段（" + "、".join(titles[titles.index("落點") + 1:]) + "）：結論收在落點")
+    hit = [w for w in ENDING_BAN if w in body["落點"]]
+    if hit:
+        problems.append("落點用了總結詞（" + "、".join(hit) + "）：結尾回扣第一句，不總結（WRITING.md §8.6）")
     # 旁白要像跟人講話：每 100 字至少 0.4 次「你」或問句
     flat = "".join(b for _, b in sections)
     n = len(norm(flat))
@@ -884,9 +912,14 @@ def main() -> int:
     problems = review_problems(film / "qa" / "review_log.md", sha_of(master))
     results.append(check("目視自評", not problems, "；".join(problems)))
 
+    for label, why in coldread_warnings(film, sha_of(master)):
+        print(f"WARN {label} — {why}")
+
     failed = results.count(False)
     print()
-    print(f"{len(results) - failed}/{len(results)} 過" + ("" if not failed else f"，{failed} 項要補"))
+    warn = len(coldread_warnings(film, sha_of(master)))
+    print(f"{len(results) - failed}/{len(results)} 過" + ("" if not failed else f"，{failed} 項要補")
+          + (f"，{warn} 項 WARN（不計入）" if warn else ""))
     return 1 if failed else 0
 
 

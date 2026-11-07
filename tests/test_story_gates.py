@@ -62,6 +62,7 @@ check("一行兩個句號擋", pc.story_problems(secs(GOOD.replace("## 機制\n"
 TAIL = GOOD + "## 收尾\n不是有選舉就叫民主，是我們一起守住規則，它才算數。\n"
 check("落點後面多一段收尾擋", pc.story_problems(secs(TAIL)) != [])
 check("轉折沒有連詞擋", pc.story_problems(secs(GOOD.replace("但問題是，", "這件事，"))) != [])
+check("落點總結詞擋", any("總結詞" in x for x in pc.story_problems(secs(GOOD.replace("## 落點\n", "## 落點\n總之，這件事很重要。\n")))))
 check("轉折用「再看」開頭擋", pc.story_problems(secs(GOOD.replace("但問題是，", "再看，"))) != [])
 check("整篇沒有「你」也沒有問句擋", pc.story_problems(secs(GOOD.replace("你", "大家").replace("？", "。"))) != [])
 check("缺落點擋", pc.story_problems(secs(GOOD.replace("## 落點", "## 其他"))) != [])

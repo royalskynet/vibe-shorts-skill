@@ -32,7 +32,11 @@ DIGIT = "零一二三四五六七八九"
 
 def spell(n: int) -> str:
     """阿拉伯數字轉中文讀法：149→一百四十九、114→一百一十四、18→十八、105→一百零五。
-    ponytail: 只做 0–9999，更大的原樣留著（稿裡的大數都寫成「十五萬六千」這種，Whisper 只會吐小段數字）。"""
+    萬位以上拆成「X萬＋餘數」：26000→二万六千（11-01 taipei-childcare「兩萬六千多個」Whisper 吐 26000，念對卡 0.77）。
+    ponytail: 只做到 9999 萬，更大的原樣留著。"""
+    if 10000 <= n <= 99999999:
+        hi, lo = divmod(n, 10000)
+        return spell(hi) + "万" + (("零" if lo < 1000 else "") + spell(lo) if lo else "")
     if not 0 <= n <= 9999:
         return str(n)
     if n == 0:
@@ -55,7 +59,8 @@ def spell(n: int) -> str:
 # 2026-10-16 你說得完全正確稿：句尾語氣詞「啊／喔／蛤／欸」被寫成「呀／哦／哈／诶」，四句重念 3 次都卡 0.80–0.89。
 # ponytail: 只收代名詞、結構助詞、語氣詞；之後撞到別的同音字再補，不要收一般字（會把真的念錯放過）。
 HOMOPHONE = str.maketrans({"她": "他", "它": "他", "牠": "他", "妳": "你", "得": "的", "地": "的",
-                           "呀": "啊", "哦": "喔", "噢": "喔", "哈": "蛤", "诶": "欸", "耶": "欸"})
+                           "呀": "啊", "哦": "喔", "噢": "喔", "哈": "蛤", "诶": "欸", "耶": "欸",
+                           "著": "着", "止": "只"})
 
 
 def norm(s: str) -> str:
@@ -66,6 +71,8 @@ def norm(s: str) -> str:
     s = re.sub(r"(\d+)\s*[%％]", r"百分之\1", s)
     s = re.sub(r"\d{4}(?=年)", lambda m: "".join(DIGIT[int(c)] for c in m.group()), s).replace("〇", "零")
     s = re.sub(r"\d+", lambda m: spell(int(m.group())), s)
+    # 數字裡的「兩千／兩百／兩萬」跟 spell 出的「二千」是同一個讀法（11-01 taipei-childcare「兩千兩百多個」對 2200 卡 0.88）；只換接位數詞的，「兩個」不動
+    s = re.sub(r"[兩两](?=[千百万萬])", "二", s)
     return to_simplified(PUNCT.sub("", s)).translate(HOMOPHONE)
 
 

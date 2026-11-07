@@ -34,8 +34,10 @@ description: 營銷號短片流水線：建片、畫面、動畫、配音、閘�
 | 2 寫檔 | `TREATMENT.md`、`narration.md`、`SOURCES.md`、`meta/facts.md`、`index.html`、`mix.py`、`cast.json`、三份 caption（`references/film-from-zero.md`） | `grep -c '^## ' narration.md` ≥ 3；最後一段是落點，沒有提問段 |
 | 2b 口語化 | 照 genie-humanizer 逐句改台灣口語，寫 `audit/humanize.md`（首行 `narration_sha:`，WRITING §7 第 10 條） | precheck「口語化（humanize）」OK |
 | 3 反方稽核 | `scripts/devils.sh films/<片名>`，逐爭點寫 `audit/verdicts.md` | exit 0；每爭點有 VERDICT |
+| 3b 稿冷讀 | `scripts/coldread.sh films/<片名> script`，只給稿、不給意圖；`VERDICT: 不通過` 的 `[硬傷]` 回改稿子 | `audit/coldread-script.md`（precheck 印 WARN，不擋） |
 | 4 建置 | `cd films/<片名> && bash build.sh` | `<片名>.mp4` > 0；`out/narration-report.json` 有 `words` |
 | 5 目視自評 | `scripts/qa_sheet.sh films/<片名>`，看 `qa/sheet.jpg` 與每卡尾幀 `qa/cards.jpg` 寫 `qa/review_log.md` | 七項各 ≥ 8，`video_sha` 對得上 |
+| 5b 片冷讀 | `scripts/coldread.sh films/<片名> film`；`scripts/gray_contrast.py films/<片名>` 看黑白對比最低 3 卡 | `qa/coldread-film.md` 有 VERDICT；`qa/gray.json`（WARN，不擋） |
 | 6 閘門 | `python3 scripts/precheck.py films/<片名>` | exit 0 才准發 |
 | 7 匯出 | `scripts/deliver.sh films/<片名>/<片名>.mp4` | `dist/` 三檔 > 0，時長差 ≤ 0.2s |
 | 8 發布（要人點頭） | `scripts/publish/`（`references/deliver-publish.md`） | `meta/published.json` 有三平台連結 |

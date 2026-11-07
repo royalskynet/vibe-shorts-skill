@@ -142,8 +142,17 @@ def phrases(text, t0, t1):
     return out
 
 
+def syllables(s):
+    """比稿用的音節序列：先照數字讀法正規化，再轉成不帶聲調的拼音。
+    Whisper 吐簡體字與同音字（「都站」聽成「兜战」、「臨托」聽成「臨拖」），字面比對冤枉念對的句子
+    （11-07 mrt-escalator 第 16 句、taipei-childcare 第 25 句）。拼音一樣代表聽起來一樣，可以接受；
+    同音字不同義的念錯會漏抓。"""
+    from pypinyin import lazy_pinyin  # 0.90 門檻與量法分開：只換量法，門檻不動
+    return lazy_pinyin(asr_norm(s))
+
+
 def similarity(want, got):
-    return difflib.SequenceMatcher(None, asr_norm(want), asr_norm(got), autojunk=False).ratio()
+    return difflib.SequenceMatcher(None, syllables(want), syllables(got), autojunk=False).ratio()
 
 
 def duration(p):
